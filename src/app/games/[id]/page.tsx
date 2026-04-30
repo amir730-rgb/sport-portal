@@ -27,17 +27,11 @@ type Photo = {
 type Survey = {
   id: string;
   isOpen: boolean;
-  isDraw: boolean;
-  winnerTeamId: string | null;
-  votes: Array<{ userId: string; winnerTeamId: string | null; isDraw: boolean; enjoyment: number }>;
+  // isDraw is repurposed as "isBalanced" vote storage
+  votes: Array<{ userId: string; isDraw: boolean }>;
   mvpVotes: Array<{ voterId: string; receiver: { id: string; name: string | null; image: string | null } }>;
   game: {
-    teams: Array<{
-      id: string;
-      name: string;
-      color: string;
-      players: Array<{ user: { id: string; name: string | null } }>;
-    }>;
+    rsvps: Array<{ user: { id: string; name: string | null } }>;
   };
 };
 
@@ -53,7 +47,7 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
   const [newMessage, setNewMessage] = useState("");
   const [photoUrl, setPhotoUrl] = useState("");
   const [photoCaption, setPhotoCaption] = useState("");
-  const [surveyForm, setSurveyForm] = useState({ winnerTeamId: "", isDraw: false, enjoyment: 4, mvpUserId: "" });
+  const [surveyForm, setSurveyForm] = useState<{ isBalanced: boolean | null; mvpUserId: string }>({ isBalanced: null, mvpUserId: "" });
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -133,18 +127,18 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
 
   async function submitSurvey(e: React.FormEvent) {
     e.preventDefault();
-    if (!surveyForm.isDraw && !surveyForm.winnerTeamId) {
-      toast.error("בחר קבוצה מנצחת או תיקו");
+    if (surveyForm.isBalanced === null) {
+      toast.error("נא לענות על שאלת האיזון");
       return;
     }
     setLoading(true);
     const res = await fetch(`/api/games/${id}/survey`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(surveyForm),
+      body: JSON.stringify({ isBalanced: surveyForm.isBalanced, mvpUserId: surveyForm.mvpUserId }),
     });
     if (res.ok) {
-      toast.success("הצבעתך נקלטה! תודה 🙏");
+      toast.success("הצבעתך נקלטה! תודה");
       fetchSurvey();
     } else {
       toast.error("שגיאה");
@@ -153,10 +147,11 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
   }
 
   const myVote = survey?.votes.find((v) => v.userId === userId);
+  const myMvpVote = survey?.mvpVotes.find((v) => v.voterId === userId);
   const tabs = [
-    { id: "chat", label: `💬 צ'אט`, count: posts.length },
-    { id: "photos", label: "📸 תמונות", count: photos.length },
-    { id: "survey", label: "🗳️ סקר", count: null, highlight: survey?.isOpen && !myVote },
+    { id: "chat", label: "צ'אט", count: posts.length },
+    { id: "photos", label: "תמונות", count: photos.length },
+    { id: "survey", label: "סקר", count: null, highlight: survey?.isOpen && !myVote },
   ];
 
   return (
@@ -311,151 +306,174 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
       {/* Survey Tab */}
       {activeTab === "survey" && (
         <div className="card">
-          <h2 className="font-bold text-slate-800 mb-4">🗳️ סקר אחרי המשחק</h2>
+          <h2 className="font-bold text-slate-800 mb-1">סקר אחרי המשחק</h2>
+          <p className="text-sm text-slate-400 mb-5">ענה על שתי שאלות קצרות על המשחק</p>
 
           {!survey ? (
-            <p className="text-slate-400 text-sm text-center py-8">
+            <p className="text-slate-400 text-sm text-center py-10">
               הסקר לא נפתח עדיין. המנהל יפתח אותו בסיום המשחק.
             </p>
           ) : myVote ? (
+            /* ─── הצביע — הצג תוצאות ─── */
             <div className="space-y-4">
-              <div className="bg-green-50 rounded-xl p-4 text-center">
-                <div className="text-3xl mb-2">✅</div>
-                <p className="font-semibold text-green-700">הצבעתך נקלטה! תודה</p>
-                <div className="flex justify-center gap-1 mt-2">
-                  {[1,2,3,4,5].map(n => (
-                    <span key={n} className={n <= myVote.enjoyment ? "text-yellow-400" : "text-slate-200"}>⭐</span>
-                  ))}
-                </div>
+              <div className="bg-green-50 border border-green-200 rounded-2xl p-4 text-center">
+                <p className="font-semibold text-green-700 text-lg">הצבעתך נקלטה</p>
+                <p className="text-sm text-green-600 mt-0.5">
+                  {myMvpVote ? `בחרת ב-${myMvpVote.receiver.name} כ-MVP` : "לא בחרת MVP"}
+                </p>
               </div>
 
-              {/* Results */}
-              {!survey.isOpen && (
-                <div className="bg-slate-50 rounded-xl p-4">
-                  <h3 className="font-bold text-slate-700 mb-3">תוצאות</h3>
-                  {survey.isDraw ? (
-                    <p className="text-2xl text-center">🤝 תיקו!</p>
-                  ) : survey.winnerTeamId ? (
-                    <p className="text-xl text-center font-bold">
-                      🏆 {survey.game.teams.find(t => t.id === survey.winnerTeamId)?.name} ניצחה!
-                    </p>
-                  ) : (
-                    <p className="text-slate-500 text-sm">עדיין לא הוכרע</p>
-                  )}
-
-                  {/* MVP Results */}
-                  {survey.mvpVotes.length > 0 && (
-                    <div className="mt-3">
-                      <h4 className="text-sm font-medium text-slate-600 mb-2">⭐ שחקן המשחק</h4>
-                      {(() => {
-                        const counts: Record<string, { name: string | null; count: number }> = {};
-                        survey.mvpVotes.forEach(v => {
-                          if (!counts[v.receiver.id]) counts[v.receiver.id] = { name: v.receiver.name, count: 0 };
-                          counts[v.receiver.id].count++;
-                        });
-                        const sorted = Object.entries(counts).sort((a, b) => b[1].count - a[1].count);
-                        return sorted.slice(0, 3).map(([uid, data]) => (
-                          <div key={uid} className="flex items-center gap-2 mb-1">
-                            <div className="w-6 h-6 rounded-full bg-yellow-100 flex items-center justify-center text-xs font-bold text-yellow-700">
-                              {data.name?.[0]}
-                            </div>
-                            <span className="text-sm text-slate-700">{data.name}</span>
-                            <span className="text-xs text-slate-400">{data.count} קולות</span>
-                          </div>
-                        ));
-                      })()}
+              {/* תוצאות איזון */}
+              {(() => {
+                const total = survey.votes.length;
+                const balancedCount = survey.votes.filter(v => v.isDraw).length;
+                const pct = total > 0 ? Math.round((balancedCount / total) * 100) : 0;
+                return (
+                  <div className="bg-slate-50 rounded-2xl p-4">
+                    <h3 className="font-semibold text-slate-700 mb-3">האם הכוחות היו מאוזנים?</h3>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="text-green-600 font-medium">כן ({balancedCount})</span>
+                      <span className="text-red-500 font-medium">לא ({total - balancedCount})</span>
                     </div>
-                  )}
+                    <div className="h-3 bg-slate-200 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-green-400 rounded-full transition-all"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1.5 text-center">{pct}% אמרו שכן · {total} מצביעים</p>
+                  </div>
+                );
+              })()}
+
+              {/* תוצאות MVP */}
+              {survey.mvpVotes.length > 0 && (
+                <div className="bg-slate-50 rounded-2xl p-4">
+                  <h3 className="font-semibold text-slate-700 mb-3">שחקן המשחק</h3>
+                  {(() => {
+                    const counts: Record<string, { name: string | null; count: number }> = {};
+                    survey.mvpVotes.forEach(v => {
+                      if (!counts[v.receiver.id]) counts[v.receiver.id] = { name: v.receiver.name, count: 0 };
+                      counts[v.receiver.id].count++;
+                    });
+                    const sorted = Object.entries(counts).sort((a, b) => b[1].count - a[1].count);
+                    return (
+                      <div className="space-y-2">
+                        {sorted.slice(0, 5).map(([uid, data], idx) => (
+                          <div key={uid} className="flex items-center gap-3">
+                            <span className={clsx(
+                              "w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
+                              idx === 0 ? "bg-yellow-100 text-yellow-700" : "bg-slate-100 text-slate-500"
+                            )}>
+                              {idx + 1}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between mb-0.5">
+                                <span className={clsx("text-sm font-medium", idx === 0 ? "text-slate-800" : "text-slate-600")}>
+                                  {data.name}
+                                </span>
+                                <span className="text-xs text-slate-400">{data.count} קולות</span>
+                              </div>
+                              <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                                <div
+                                  className={clsx("h-full rounded-full", idx === 0 ? "bg-yellow-400" : "bg-slate-300")}
+                                  style={{ width: `${(data.count / survey.mvpVotes.length) * 100}%` }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
             </div>
           ) : survey.isOpen ? (
-            <form onSubmit={submitSurvey} className="space-y-5">
-              {/* Winner */}
+            /* ─── טופס הצבעה ─── */
+            <form onSubmit={submitSurvey} className="space-y-6">
+
+              {/* שאלה 1: האם הכוחות היו מאוזנים? */}
               <div>
-                <h3 className="font-medium text-slate-700 mb-3">מי ניצחה?</h3>
-                <div className="space-y-2">
-                  {survey.game.teams.map((team) => (
-                    <label key={team.id} className="flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all hover:border-green-300">
-                      <input
-                        type="radio"
-                        name="winner"
-                        value={team.id}
-                        checked={!surveyForm.isDraw && surveyForm.winnerTeamId === team.id}
-                        onChange={() => setSurveyForm(p => ({ ...p, winnerTeamId: team.id, isDraw: false }))}
-                        className="accent-green-500"
-                      />
-                      <span className="font-medium">{team.name}</span>
-                      <span className="text-xs text-slate-400">({team.players.length} שחקנים)</span>
-                    </label>
-                  ))}
-                  <label className="flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all hover:border-slate-300">
-                    <input
-                      type="radio"
-                      name="winner"
-                      checked={surveyForm.isDraw}
-                      onChange={() => setSurveyForm(p => ({ ...p, isDraw: true, winnerTeamId: "" }))}
-                      className="accent-slate-500"
-                    />
-                    <span className="font-medium">🤝 תיקו</span>
-                  </label>
+                <h3 className="font-semibold text-slate-800 mb-1">האם הכוחות היו מאוזנים?</h3>
+                <p className="text-xs text-slate-400 mb-3">האם שתי הקבוצות היו שקולות זו לזו?</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setSurveyForm(p => ({ ...p, isBalanced: true }))}
+                    className={clsx(
+                      "py-4 rounded-2xl border-2 font-semibold text-sm transition-all",
+                      surveyForm.isBalanced === true
+                        ? "border-green-500 bg-green-50 text-green-700"
+                        : "border-slate-200 text-slate-500 hover:border-green-300"
+                    )}
+                  >
+                    כן, היו מאוזנים
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSurveyForm(p => ({ ...p, isBalanced: false }))}
+                    className={clsx(
+                      "py-4 rounded-2xl border-2 font-semibold text-sm transition-all",
+                      surveyForm.isBalanced === false
+                        ? "border-red-400 bg-red-50 text-red-600"
+                        : "border-slate-200 text-slate-500 hover:border-red-200"
+                    )}
+                  >
+                    לא, לא מאוזנים
+                  </button>
                 </div>
               </div>
 
-              {/* MVP */}
+              {/* שאלה 2: MVP */}
               <div>
-                <h3 className="font-medium text-slate-700 mb-3">⭐ שחקן המשחק</h3>
+                <h3 className="font-semibold text-slate-800 mb-1">מי היה MVP?</h3>
+                <p className="text-xs text-slate-400 mb-3">שחקן המשחק — אופציונלי</p>
                 <div className="grid grid-cols-2 gap-2">
-                  {survey.game.teams.flatMap(t => t.players).map(p => (
-                    <label
-                      key={p.user.id}
-                      className={clsx(
-                        "flex items-center gap-2 p-2.5 rounded-xl border-2 cursor-pointer transition-all",
-                        surveyForm.mvpUserId === p.user.id
-                          ? "border-yellow-400 bg-yellow-50"
-                          : "border-slate-200 hover:border-yellow-200"
-                      )}
-                    >
-                      <input
-                        type="radio"
-                        name="mvp"
-                        value={p.user.id}
-                        checked={surveyForm.mvpUserId === p.user.id}
-                        onChange={() => setSurveyForm(prev => ({ ...prev, mvpUserId: p.user.id }))}
-                        className="accent-yellow-500"
-                      />
-                      <span className="text-sm font-medium">{p.user.name}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Enjoyment */}
-              <div>
-                <h3 className="font-medium text-slate-700 mb-3">כמה נהנית? ({surveyForm.enjoyment}/5)</h3>
-                <div className="flex gap-2">
-                  {[1,2,3,4,5].map(n => (
+                  {survey.game.rsvps.map(rsvp => (
                     <button
-                      key={n}
                       type="button"
-                      onClick={() => setSurveyForm(p => ({ ...p, enjoyment: n }))}
+                      key={rsvp.user.id}
+                      onClick={() => setSurveyForm(p => ({
+                        ...p,
+                        mvpUserId: p.mvpUserId === rsvp.user.id ? "" : rsvp.user.id,
+                      }))}
                       className={clsx(
-                        "flex-1 py-3 rounded-xl text-lg transition-all",
-                        n <= surveyForm.enjoyment ? "bg-yellow-100 text-yellow-600" : "bg-slate-100 text-slate-300"
+                        "flex items-center gap-2.5 p-3 rounded-xl border-2 text-right transition-all",
+                        surveyForm.mvpUserId === rsvp.user.id
+                          ? "border-yellow-400 bg-yellow-50"
+                          : "border-slate-200 hover:border-yellow-300"
                       )}
                     >
-                      ⭐
+                      <div className={clsx(
+                        "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0",
+                        surveyForm.mvpUserId === rsvp.user.id
+                          ? "bg-yellow-400 text-white"
+                          : "bg-slate-100 text-slate-600"
+                      )}>
+                        {rsvp.user.name?.[0] ?? "?"}
+                      </div>
+                      <span className={clsx(
+                        "text-sm font-medium",
+                        surveyForm.mvpUserId === rsvp.user.id ? "text-yellow-700" : "text-slate-700"
+                      )}>
+                        {rsvp.user.name}
+                      </span>
                     </button>
                   ))}
                 </div>
               </div>
 
-              <button type="submit" disabled={loading} className="btn-primary w-full">
-                שלח הצבעה 🗳️
+              <button
+                type="submit"
+                disabled={loading || surveyForm.isBalanced === null}
+                className="btn-primary w-full"
+              >
+                שלח הצבעה
               </button>
             </form>
           ) : (
-            <p className="text-slate-400 text-sm text-center py-8">הסקר נסגר</p>
+            <p className="text-slate-400 text-sm text-center py-10">הסקר נסגר</p>
           )}
         </div>
       )}

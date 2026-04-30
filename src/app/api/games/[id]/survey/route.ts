@@ -10,7 +10,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const survey = await prisma.survey.findUnique({
       where: { gameId },
       include: {
-        winnerTeam: true,
         votes: {
           include: { user: { select: { id: true, name: true } } },
         },
@@ -22,7 +21,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         },
         game: {
           include: {
-            teams: { include: { players: { include: { user: { select: { id: true, name: true } } } } } },
+            // Include confirmed RSVPs for MVP player list
+            rsvps: {
+              where: { status: "confirmed" },
+              include: { user: { select: { id: true, name: true } } },
+            },
           },
         },
       },
@@ -71,7 +74,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (!session?.user) return NextResponse.json({ error: "לא מחובר" }, { status: 401 });
 
     const { id: gameId } = await params;
-    const { winnerTeamId, isDraw, enjoyment, mvpUserId } = await req.json();
+    // isBalanced: true = "כן, היו מאוזנים", false = "לא, לא מאוזנים"
+    const { isBalanced, mvpUserId } = await req.json();
     const userId = (session.user as { id?: string }).id!;
 
     const survey = await prisma.survey.findUnique({ where: { gameId } });
@@ -79,11 +83,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: "הסקר לא פתוח" }, { status: 400 });
     }
 
-    // Upsert the survey vote
+    // Store isBalanced as isDraw field (reuse existing column), enjoyment defaulted to 3
     await prisma.surveyVote.upsert({
       where: { surveyId_userId: { surveyId: survey.id, userId } },
-      update: { winnerTeamId: isDraw ? null : winnerTeamId, isDraw, enjoyment },
-      create: { surveyId: survey.id, userId, winnerTeamId: isDraw ? null : winnerTeamId, isDraw, enjoyment },
+      update: { isDraw: isBalanced === true, winnerTeamId: null, enjoyment: 3 },
+      create: { surveyId: survey.id, userId, isDraw: isBalanced === true, winnerTeamId: null, enjoyment: 3 },
     });
 
     // Upsert MVP vote
@@ -93,32 +97,6 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         update: { receiverId: mvpUserId },
         create: { surveyId: survey.id, voterId: userId, receiverId: mvpUserId },
       });
-    }
-
-    // Tally results: if >50% agree on winner/draw, close survey and set result
-    const allVotes = await prisma.surveyVote.findMany({ where: { surveyId: survey.id } });
-    const totalVoters = allVotes.length;
-
-    if (totalVoters >= 3) {
-      const drawVotes = allVotes.filter((v) => v.isDraw).length;
-      if (drawVotes / totalVoters > 0.5) {
-        await prisma.survey.update({
-          where: { id: survey.id },
-          data: { isDraw: true, isOpen: false, closedAt: new Date() },
-        });
-      } else {
-        const teamVoteCounts: Record<string, number> = {};
-        allVotes.filter((v) => !v.isDraw && v.winnerTeamId).forEach((v) => {
-          if (v.winnerTeamId) teamVoteCounts[v.winnerTeamId] = (teamVoteCounts[v.winnerTeamId] || 0) + 1;
-        });
-        const winnerEntry = Object.entries(teamVoteCounts).sort((a, b) => b[1] - a[1])[0];
-        if (winnerEntry && winnerEntry[1] / totalVoters > 0.5) {
-          await prisma.survey.update({
-            where: { id: survey.id },
-            data: { winnerTeamId: winnerEntry[0], isOpen: false, closedAt: new Date() },
-          });
-        }
-      }
     }
 
     return NextResponse.json({ success: true });
