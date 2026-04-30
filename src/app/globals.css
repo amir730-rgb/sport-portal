@@ -64,29 +64,30 @@ body {
   @apply block text-sm font-medium text-slate-700 mb-1.5;
 }
 
-/* Badges */
+/* Badges — base */
 .badge {
   @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold;
 }
 
+/* Badges — colour variants (must repeat base styles; Tailwind v4 forbids @apply on custom classes) */
 .badge-green {
-  @apply badge bg-green-50 text-green-700 border border-green-100;
+  @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-100;
 }
 
 .badge-red {
-  @apply badge bg-red-50 text-red-700 border border-red-100;
+  @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-100;
 }
 
 .badge-yellow {
-  @apply badge bg-amber-50 text-amber-700 border border-amber-100;
+  @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-100;
 }
 
 .badge-slate {
-  @apply badge bg-slate-100 text-slate-600;
+  @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600;
 }
 
 .badge-blue {
-  @apply badge bg-blue-50 text-blue-700 border border-blue-100;
+  @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100;
 }
 
 /* Section title */
