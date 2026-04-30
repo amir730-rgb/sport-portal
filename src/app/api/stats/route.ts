@@ -85,7 +85,7 @@ export async function GET() {
     return NextResponse.json({
       players: stats,
       awards: {
-        topMvp:      topMvp      ? { player: topMvp,      title: "כוכב העונה", desc: "שחקן ה-MVP הכי הרבה פעמים" } : null,
+        topMvp:      topMvp      ? { player: topMvp,      title: "כוכב העונה", desc: `${topMvp.mvpCount} ${topMvp.mvpCount === 1 ? "זכייה" : "זכיות"} ב-MVP` } : null,
         mostCanceled: mostCanceled ? { player: mostCanceled, title: "הקישקוש",    desc: "הכי הרבה ביטולים"           } : null,
       },
     });
