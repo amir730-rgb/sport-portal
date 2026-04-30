@@ -200,15 +200,14 @@ model Photo {
 
 model Duty {
   id        String   @id @default(cuid())
-  gameId    String
+  gameId    String?  // null = manually-recorded standalone entry
   userId    String
   type      String   // "laundry" | "field_payment"
+  note      String?  // optional label for standalone entries
   createdAt DateTime @default(now())
 
-  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([gameId, type])
+  game Game? @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Payment {

@@ -44,10 +44,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ success: true });
     }
 
-    const duty = await prisma.duty.upsert({
-      where: { gameId_type: { gameId, type } },
-      update: { userId },
-      create: { gameId, type, userId },
+    // Remove any existing duty of this type for this game, then create fresh
+    await prisma.duty.deleteMany({ where: { gameId, type } });
+    const duty = await prisma.duty.create({
+      data: { gameId, type, userId },
       include: {
         user: { select: { id: true, name: true, image: true } },
       },
