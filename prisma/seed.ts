@@ -1,22 +1,30 @@
+import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
-const dbUrl = process.env.DATABASE_URL ?? "";
+function createPrismaClient(): PrismaClient {
+  const dbUrl = process.env.DATABASE_URL ?? "";
+  console.log("[seed] DATABASE_URL prefix:", dbUrl.substring(0, 20));
 
-let prisma: PrismaClient;
-if (dbUrl.startsWith("postgres")) {
-  const { neon } = await import("@neondatabase/serverless");
-  const { PrismaNeon } = await import("@prisma/adapter-neon");
-  const sql = neon(dbUrl);
-  const adapter = new PrismaNeon(sql);
-  prisma = new PrismaClient({ adapter });
-} else {
-  const { PrismaBetterSqlite3 } = await import("@prisma/adapter-better-sqlite3");
-  const path = await import("path");
+  if (dbUrl.startsWith("postgres")) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { Pool } = require("pg");
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { PrismaPg } = require("@prisma/adapter-pg");
+    const pool = new Pool({ connectionString: dbUrl });
+    const adapter = new PrismaPg(pool);
+    return new PrismaClient({ adapter });
+  }
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { PrismaBetterSqlite3 } = require("@prisma/adapter-better-sqlite3");
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const path = require("path");
   const dbPath = path.resolve(process.cwd(), "./dev.db");
   const adapter = new PrismaBetterSqlite3({ url: `file:${dbPath}` });
-  prisma = new PrismaClient({ adapter });
+  return new PrismaClient({ adapter });
 }
+
+const prisma = createPrismaClient();
 
 async function main() {
   console.log("🌱 Seeding database...");

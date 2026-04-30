@@ -8,13 +8,13 @@ function createPrismaClient(): PrismaClient {
   const dbUrl = process.env.DATABASE_URL ?? "";
 
   if (dbUrl.startsWith("postgres")) {
-    // PostgreSQL via Neon (production / Vercel)
+    // PostgreSQL (production / Vercel + Neon)
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { neon } = require("@neondatabase/serverless");
+    const { Pool } = require("pg");
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { PrismaNeon } = require("@prisma/adapter-neon");
-    const sql = neon(dbUrl);
-    const adapter = new PrismaNeon(sql);
+    const { PrismaPg } = require("@prisma/adapter-pg");
+    const pool = new Pool({ connectionString: dbUrl });
+    const adapter = new PrismaPg(pool);
     return new PrismaClient({ adapter });
   }
 
