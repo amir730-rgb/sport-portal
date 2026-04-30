@@ -6,8 +6,8 @@ import Navbar from "@/components/Navbar";
 import MainWrapper from "@/components/MainWrapper";
 
 export const metadata: Metadata = {
-  title: "⚽ Sport Portal - פורטל הכדורגל שלנו",
-  description: "ניהול משחקי כדורגל לחברים",
+  title: "KickList — ניהול משחקי כדורגל",
+  description: "ניהול משחקי כדורגל לקבוצות חברים",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

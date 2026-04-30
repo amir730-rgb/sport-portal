@@ -4,7 +4,8 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import clsx from "clsx";
-import { positionsIcon, positionsLabel } from "@/lib/teams";
+import { positionsLabel } from "@/lib/teams";
+import { BarChart2, Trophy, Star, Users, Target, Loader2, Medal } from "lucide-react";
 
 type PlayerStat = {
   id: string;
@@ -55,7 +56,7 @@ export default function StatsPage() {
   if (!stats) {
     return (
       <div className="flex justify-center items-center min-h-64">
-        <div className="text-4xl animate-bounce">⚽</div>
+        <Loader2 size={28} className="text-green-500 animate-spin" />
       </div>
     );
   }
@@ -78,20 +79,22 @@ export default function StatsPage() {
     <div className="space-y-6">
       {/* Title */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-800">📊 סטטיסטיקות</h1>
+        <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+          <BarChart2 size={20} className="text-green-600" /> סטטיסטיקות
+        </h1>
         <p className="text-slate-500 text-sm mt-1">טבלת הדירוג של הקבוצה</p>
       </div>
 
       {/* Awards Wall */}
       {awards.length > 0 && (
         <section>
-          <h2 className="text-lg font-bold text-slate-700 mb-3">🏅 תארי הכבוד</h2>
+          <h2 className="section-title flex items-center gap-1.5"><Medal size={11} /> תארי הכבוד</h2>
           <div className="grid grid-cols-2 gap-3">
             {awards.map((award) => (
               <div key={award.title} className="card text-center">
-                <div className="text-3xl mb-1">{award.title.split(" ")[0]}</div>
-                <div className="font-bold text-slate-800 text-sm">{award.title.split(" ").slice(1).join(" ")}</div>
-                <div className="text-lg font-bold text-green-600 mt-1">{award.player.name}</div>
+                <Trophy size={20} className="text-amber-400 mx-auto mb-1" />
+                <div className="font-bold text-slate-800 text-sm">{award.title.replace(/^[^\s]+\s/, "")}</div>
+                <div className="text-base font-bold text-green-600 mt-1">{award.player.name}</div>
                 <div className="text-xs text-slate-400 mt-0.5">{award.desc}</div>
               </div>
             ))}
@@ -102,22 +105,20 @@ export default function StatsPage() {
       {/* Sort tabs */}
       <div className="flex bg-white rounded-2xl border border-slate-100 p-1 gap-1">
         {[
-          { id: "mvp", label: "⭐ MVP" },
-          { id: "wins", label: "🏆 ניצחונות" },
-          { id: "attendance", label: "📊 נוכחות" },
-          { id: "games", label: "⚽ משחקים" },
+          { id: "mvp",        label: "MVP",       icon: Star },
+          { id: "wins",       label: "ניצחונות",  icon: Trophy },
+          { id: "attendance", label: "נוכחות",    icon: Users },
+          { id: "games",      label: "משחקים",    icon: Target },
         ].map((tab) => (
           <button
             key={tab.id}
             onClick={() => setSortBy(tab.id as typeof sortBy)}
             className={clsx(
-              "flex-1 py-2 rounded-xl text-xs font-medium transition-all",
-              sortBy === tab.id
-                ? "bg-green-500 text-white"
-                : "text-slate-500 hover:bg-slate-50"
+              "flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-xs font-medium transition-all",
+              sortBy === tab.id ? "bg-green-600 text-white" : "text-slate-500 hover:bg-slate-50"
             )}
           >
-            {tab.label}
+            <tab.icon size={12} /> {tab.label}
           </button>
         ))}
       </div>
@@ -141,7 +142,7 @@ export default function StatsPage() {
                 idx === 2 ? "bg-orange-400 text-white" :
                 "bg-slate-100 text-slate-500"
               )}>
-                {idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : idx + 1}
+                {idx + 1}
               </div>
 
               {/* Avatar */}
@@ -153,13 +154,12 @@ export default function StatsPage() {
                 <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="font-semibold text-slate-800 truncate">{player.name}</p>
-                  <span className="text-xs text-slate-400">{positionsIcon(player.position)}</span>
+                  <span className="text-xs text-slate-400">{positionsLabel(player.position)}</span>
                 </div>
                 <div className="flex items-center gap-3 mt-0.5">
-                  <span className="text-xs text-slate-400">{positionsLabel(player.position)}</span>
-                  <div className="flex gap-0.5">
+                  <div className="flex gap-0.5 mt-0.5">
                     {[1,2,3,4,5].map(n => (
-                      <span key={n} className={`text-xs ${n <= player.skillLevel ? "text-yellow-400" : "text-slate-200"}`}>★</span>
+                      <Star key={n} size={10} fill={n <= player.skillLevel ? "#facc15" : "none"} stroke={n <= player.skillLevel ? "#facc15" : "#e2e8f0"} />
                     ))}
                   </div>
                 </div>

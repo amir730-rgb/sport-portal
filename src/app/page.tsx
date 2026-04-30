@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { format, isPast, isToday, isTomorrow } from "date-fns";
 import { he } from "date-fns/locale";
-import toast from "react-hot-toast";
 import GameCard from "@/components/GameCard";
+import { Calendar, Clock, MapPin, Loader2 } from "lucide-react";
 
 type Game = {
   id: string;
@@ -38,9 +38,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/login");
-    }
+    if (status === "unauthenticated") router.push("/login");
   }, [status, router]);
 
   useEffect(() => {
@@ -49,7 +47,7 @@ export default function HomePage() {
 
   async function fetchGames() {
     try {
-      const res = await fetch("/api/games");
+      const res  = await fetch("/api/games");
       const data = await res.json();
       setGames(Array.isArray(data) ? data : []);
     } catch {
@@ -61,97 +59,93 @@ export default function HomePage() {
   if (status === "loading" || loading) {
     return (
       <div className="flex justify-center items-center min-h-64">
-        <div className="text-4xl animate-bounce">⚽</div>
+        <Loader2 size={28} className="text-green-500 animate-spin" />
       </div>
     );
   }
 
   if (!session) return null;
 
-  const userId = (session.user as { id?: string }).id!;
+  const userId   = (session.user as { id?: string }).id!;
+  const firstName = session.user?.name?.split(" ")[0] ?? "";
   const upcoming = games.filter((g) => !isPast(new Date(g.date)) || isToday(new Date(g.date)));
-  const past = games.filter((g) => isPast(new Date(g.date)) && !isToday(new Date(g.date)));
+  const past     = games.filter((g) => isPast(new Date(g.date)) && !isToday(new Date(g.date)));
+
+  const nextGame = upcoming[0];
 
   return (
-    <div className="space-y-8">
-      {/* Hero */}
-      <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-2xl p-6 text-white">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">שלום, {session.user?.name?.split(" ")[0]}! 👋</h1>
-            <p className="text-green-100 mt-1">
-              {upcoming.length > 0
-                ? `יש ${upcoming.length} משחק${upcoming.length > 1 ? "ים" : ""} קרוב${upcoming.length > 1 ? "ים" : ""}`
-                : "אין משחקים קרובים בינתיים"}
-            </p>
-          </div>
-          <div className="text-5xl">⚽</div>
-        </div>
+    <div className="space-y-6">
 
-        {/* Next game highlight */}
-        {upcoming[0] && (
-          <div className="mt-4 bg-white/20 rounded-xl p-4">
-            <p className="text-green-100 text-sm font-medium">המשחק הבא</p>
-            <p className="font-bold text-lg mt-1">
-              {isToday(new Date(upcoming[0].date))
-                ? "היום!"
-                : isTomorrow(new Date(upcoming[0].date))
-                ? "מחר"
-                : format(new Date(upcoming[0].date), "EEEE, d בMMM", { locale: he })}
-              {" · "}
-              {format(new Date(upcoming[0].date), "HH:mm")}
-            </p>
-            <p className="text-green-100 text-sm">{upcoming[0].location}</p>
-          </div>
-        )}
+      {/* ── Hero banner ── */}
+      <div className="relative bg-[#0f172a] rounded-2xl overflow-hidden">
+        {/* green glow accent */}
+        <div className="absolute inset-0 bg-gradient-to-br from-green-600/20 via-transparent to-transparent pointer-events-none" />
+
+        <div className="relative px-6 pt-6 pb-5">
+          <p className="text-slate-400 text-sm font-medium mb-0.5">שלום,</p>
+          <h1 className="text-xl font-bold text-white">{firstName}</h1>
+
+          {nextGame ? (
+            <div className="mt-4 bg-white/8 border border-white/10 rounded-xl px-4 py-3">
+              <p className="text-xs font-semibold text-green-400 uppercase tracking-widest mb-1.5">המשחק הבא</p>
+              <p className="font-bold text-white text-base">
+                {isToday(new Date(nextGame.date))     ? "היום"
+                : isTomorrow(new Date(nextGame.date))  ? "מחר"
+                : format(new Date(nextGame.date), "EEEE, d בMMM", { locale: he })}
+              </p>
+              <div className="flex items-center gap-3 mt-1.5 text-sm text-slate-400">
+                <span className="flex items-center gap-1"><Clock size={12} />{format(new Date(nextGame.date), "HH:mm")}</span>
+                <span className="text-slate-600">·</span>
+                <span className="flex items-center gap-1 truncate"><MapPin size={12} /><span className="truncate">{nextGame.location}</span></span>
+              </div>
+            </div>
+          ) : (
+            <p className="mt-3 text-slate-400 text-sm">אין משחקים קרובים בינתיים</p>
+          )}
+        </div>
       </div>
 
-      {/* Upcoming Games */}
+      {/* ── Upcoming games ── */}
       {upcoming.length > 0 && (
         <section>
-          <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-            📅 משחקים קרובים
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-500 uppercase tracking-widest mb-3">
+            <Calendar size={14} />
+            משחקים קרובים
           </h2>
-          <div className="space-y-4">
+          <div className="space-y-3">
             {upcoming.map((game) => (
-              <GameCard
-                key={game.id}
-                game={game}
-                userId={userId}
-                onUpdate={fetchGames}
-              />
+              <GameCard key={game.id} game={game} userId={userId} onUpdate={fetchGames} />
             ))}
           </div>
         </section>
       )}
 
-      {/* Past Games */}
+      {/* ── Past games ── */}
       {past.length > 0 && (
         <section>
-          <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-            🕐 משחקים אחרונים
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-500 uppercase tracking-widest mb-3">
+            <Clock size={14} />
+            משחקים אחרונים
           </h2>
-          <div className="space-y-4">
+          <div className="space-y-3">
             {past.slice(0, 5).map((game) => (
-              <GameCard
-                key={game.id}
-                game={game}
-                userId={userId}
-                onUpdate={fetchGames}
-                isPast
-              />
+              <GameCard key={game.id} game={game} userId={userId} onUpdate={fetchGames} isPast />
             ))}
           </div>
         </section>
       )}
 
+      {/* ── Empty state ── */}
       {games.length === 0 && (
-        <div className="text-center py-16 text-slate-400">
-          <div className="text-6xl mb-4">🏟️</div>
-          <p className="text-lg font-medium">עדיין אין משחקים מתוכננים</p>
-          <p className="text-sm mt-1">המנהל יפרסם משחקים בקרוב</p>
+        <div className="text-center py-20">
+          <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Calendar size={24} className="text-slate-400" />
+          </div>
+          <p className="text-slate-600 font-semibold">אין משחקים מתוכננים</p>
+          <p className="text-slate-400 text-sm mt-1">המנהל יפרסם משחקים בקרוב</p>
         </div>
       )}
+
     </div>
   );
 }
