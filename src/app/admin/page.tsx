@@ -21,8 +21,9 @@ type Game = {
   maxPlayers: number;
   status: string;
   notes: string | null;
+  teamsPublished: boolean;
   rsvps: Array<{ status: string; user: { id: string; name: string | null } }>;
-  teams: Array<{ id: string; name: string; color: string }>;
+  teams: Array<{ id: string; name: string; color: string; players: Array<{ user: { id: string; name: string | null } }> }>;
   survey: { id: string; isOpen: boolean } | null;
   duties: Array<{ type: string; user: { id: string; name: string | null } }>;
 };
@@ -128,6 +129,22 @@ export default function AdminPage() {
       fetchGames();
     } else {
       toast.error("שגיאה ביצירת קבוצות");
+    }
+    setLoading(false);
+  }
+
+  async function publishTeams(gameId: string, publish: boolean) {
+    setLoading(true);
+    const res = await fetch(`/api/admin/games/${gameId}/publish`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ publish }),
+    });
+    if (res.ok) {
+      toast.success(publish ? "הרכבים פורסמו לשחקנים" : "פרסום הרכבים בוטל");
+      fetchGames();
+    } else {
+      toast.error("שגיאה");
     }
     setLoading(false);
   }
@@ -469,16 +486,35 @@ export default function AdminPage() {
                     >
                       {isEditing ? <><X size={12} /> ביטול</> : <><Pencil size={12} /> עריכה</>}
                     </button>
+                    {/* Team builder — always show when there are confirmed players */}
+                    {confirmed.length >= 2 && (
+                      <button
+                        onClick={() => setTeamBuilderGameId(game.id)}
+                        className="flex items-center gap-1 text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-3 py-1.5 rounded-lg font-medium transition-colors"
+                        title="הרכב קבוצות ידנית"
+                      >
+                        <Users size={12} /> הרכב
+                      </button>
+                    )}
+                    {/* Publish / unpublish teams */}
+                    {game.teams.length > 0 && (
+                      <button
+                        onClick={() => publishTeams(game.id, !game.teamsPublished)}
+                        disabled={loading}
+                        className={clsx(
+                          "flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg font-medium transition-colors",
+                          game.teamsPublished
+                            ? "bg-green-100 text-green-700 hover:bg-green-200"
+                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                        )}
+                      >
+                        <Shield size={12} />
+                        {game.teamsPublished ? "מפורסם" : "פרסם"}
+                      </button>
+                    )}
                     {game.status === "open" && (
                       <>
-                        <button
-                          onClick={() => setTeamBuilderGameId(game.id)}
-                          disabled={confirmed.length < 2}
-                          className="flex items-center gap-1 text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-3 py-1.5 rounded-lg font-medium transition-colors disabled:opacity-50"
-                          title="הרכב קבוצות ידנית"
-                        >
-                          <Users size={12} /> הרכב
-                        </button>
+                        {/* placeholder to preserve existing buttons below */}
                         <button
                           onClick={() => closeGame(game.id)}
                           disabled={loading}

@@ -74,14 +74,15 @@ model VerificationToken {
 }
 
 model Game {
-  id          String   @id @default(cuid())
-  date        DateTime
-  location    String   @default("מגרש הכדורגל")
-  maxPlayers  Int      @default(14)
-  status      String   @default("open") // "open" | "closed" | "completed"
-  notes       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              String   @id @default(cuid())
+  date            DateTime
+  location        String   @default("מגרש הכדורגל")
+  maxPlayers      Int      @default(14)
+  status          String   @default("open") // "open" | "closed" | "completed"
+  notes           String?
+  teamsPublished  Boolean  @default(false)  // controls visibility of teams to players
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   rsvps       RSVP[]
   teams       Team[]

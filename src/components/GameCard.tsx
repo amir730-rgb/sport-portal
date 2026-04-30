@@ -8,6 +8,7 @@ import toast from "react-hot-toast";
 import clsx from "clsx";
 import { TEAM_COLORS, positionsIcon } from "@/lib/teams";
 import DutyBadges from "./DutyBadges";
+import FootballLineup from "./FootballLineup";
 import {
   Clock,
   MapPin,
@@ -31,6 +32,7 @@ type Game = {
   maxPlayers: number;
   status: string;
   notes: string | null;
+  teamsPublished: boolean;
   rsvps: Array<{
     id: string;
     status: string;
@@ -40,7 +42,7 @@ type Game = {
     id: string;
     name: string;
     color: string;
-    players: Array<{ user: { id: string; name: string | null; image: string | null; position: string } }>;
+    players: Array<{ slotNote: string | null; user: { id: string; name: string | null; image: string | null; position: string } }>;
   }>;
   survey: { id: string; isOpen: boolean; isDraw: boolean; winnerTeamId: string | null } | null;
   duties: Array<{ type: string; user: { id: string; name: string | null } }>;
@@ -116,6 +118,11 @@ export default function GameCard({ game, userId, onUpdate, isPast = false }: Pro
               <span className={clsx("w-1.5 h-1.5 rounded-full", status.dot)} />
               {status.label}
             </span>
+            {game.teamsPublished && game.teams.length > 0 && (
+              <span className="badge bg-indigo-100 text-indigo-700 border-indigo-200 text-[11px] font-bold px-2">
+                הרכב פורסם
+              </span>
+            )}
             {isToday(dateObj) && (
               <span className="badge bg-red-500 text-white animate-pulse border-0 text-[11px] font-bold px-2">
                 היום
@@ -241,28 +248,11 @@ export default function GameCard({ game, userId, onUpdate, isPast = false }: Pro
             </div>
           )}
 
-          {/* Teams or player list */}
-          {game.teams.length > 0 ? (
+          {/* Teams / Lineup / Player list */}
+          {game.teamsPublished && game.teams.length > 0 ? (
             <div>
-              <p className="section-title">הרכבים</p>
-              <div className="grid grid-cols-2 gap-2.5">
-                {game.teams.map((team) => {
-                  const colorInfo = TEAM_COLORS.find((c) => c.color === team.color);
-                  return (
-                    <div key={team.id} className={clsx("rounded-xl p-3 border-2", colorInfo?.light, colorInfo?.border)}>
-                      <div className={clsx("font-bold text-sm mb-2", colorInfo?.text)}>{team.name}</div>
-                      <div className="space-y-1">
-                        {team.players.map((p) => (
-                          <div key={p.user.id} className="flex items-center gap-1.5 text-sm">
-                            <span className="text-xs w-4">{positionsIcon(p.user.position)}</span>
-                            <span className="text-slate-700 truncate">{p.user.name}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              <p className="section-title mb-3">הרכבי הקבוצות</p>
+              <FootballLineup teams={game.teams} />
             </div>
           ) : (
             <div>

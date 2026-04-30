@@ -5,6 +5,9 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
+    const session = await getServerSession(authOptions);
+    const isAdmin = (session?.user as { role?: string })?.role === "admin";
+
     const games = await prisma.game.findMany({
       orderBy: { date: "asc" },
       include: {
@@ -15,15 +18,27 @@ export async function GET() {
             },
           },
         },
-        teams: {
-          include: {
-            players: {
+        // Admins always see teams; non-admins only see published teams
+        teams: isAdmin
+          ? {
               include: {
-                user: { select: { id: true, name: true, image: true, position: true } },
+                players: {
+                  include: {
+                    user: { select: { id: true, name: true, image: true, position: true } },
+                  },
+                },
+              },
+            }
+          : {
+              where: { game: { teamsPublished: true } },
+              include: {
+                players: {
+                  include: {
+                    user: { select: { id: true, name: true, image: true, position: true } },
+                  },
+                },
               },
             },
-          },
-        },
         survey: true,
         duties: {
           include: {
@@ -34,7 +49,15 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json(games);
+    // For non-admins: strip teams from games where teamsPublished = false
+    const result = isAdmin
+      ? games
+      : games.map((g) => ({
+          ...g,
+          teams: g.teamsPublished ? g.teams : [],
+        }));
+
+    return NextResponse.json(result);
   } catch {
     return NextResponse.json({ error: "שגיאת שרת" }, { status: 500 });
   }
