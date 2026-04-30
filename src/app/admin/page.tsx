@@ -486,16 +486,19 @@ export default function AdminPage() {
                     >
                       {isEditing ? <><X size={12} /> ביטול</> : <><Pencil size={12} /> עריכה</>}
                     </button>
-                    {/* Team builder — always show when there are confirmed players */}
-                    {confirmed.length >= 2 && (
-                      <button
-                        onClick={() => setTeamBuilderGameId(game.id)}
-                        className="flex items-center gap-1 text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-3 py-1.5 rounded-lg font-medium transition-colors"
-                        title="הרכב קבוצות ידנית"
-                      >
-                        <Users size={12} /> הרכב
-                      </button>
-                    )}
+                    {/* Team builder — always visible to admin */}
+                    <button
+                      onClick={() => setTeamBuilderGameId(game.id)}
+                      className={clsx(
+                        "flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg font-medium transition-colors",
+                        confirmed.length >= 2
+                          ? "bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                          : "bg-slate-100 text-slate-400 cursor-default"
+                      )}
+                      title={confirmed.length < 2 ? "נדרשים לפחות 2 שחקנים מאושרים" : "הרכב קבוצות ידנית"}
+                    >
+                      <Users size={12} /> הרכב
+                    </button>
                     {/* Publish / unpublish teams */}
                     {game.teams.length > 0 && (
                       <button
