@@ -31,6 +31,7 @@ model User {
   mvpVotes      MVPVote[]   @relation("MVPVoter")
   mvpReceived   MVPVote[]   @relation("MVPReceiver")
   duties        Duty[]
+  payments      Payment[]
 }
 
 model Account {
@@ -85,6 +86,7 @@ model Game {
   posts       Post[]
   photos      Photo[]
   duties      Duty[]
+  payments    Payment[]
 }
 
 model RSVP {
@@ -202,4 +204,20 @@ model Duty {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([gameId, type])
+}
+
+model Payment {
+  id        String    @id @default(cuid())
+  gameId    String
+  userId    String
+  paid      Boolean   @default(false)
+  paidAt    DateTime?
+  note      String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([gameId, userId])
 }

@@ -9,7 +9,8 @@ import toast from "react-hot-toast";
 import clsx from "clsx";
 import { positionsLabel } from "@/lib/teams";
 import DutyPicker from "@/components/DutyPicker";
-import { Pencil, X, Users, MapPin, Calendar, Shield, Trash2, Users2, ClipboardCheck, Lock } from "lucide-react";
+import PaymentsTab from "@/components/PaymentsTab";
+import { Pencil, X, Users, MapPin, Calendar, Shield, Trash2, Users2, ClipboardCheck, Lock, CreditCard } from "lucide-react";
 
 type Game = {
   id: string;
@@ -38,7 +39,7 @@ type User = {
 export default function AdminPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"games" | "players">("games");
+  const [activeTab, setActiveTab] = useState<"games" | "players" | "payments">("games");
   const [games, setGames] = useState<Game[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [showNewGame, setShowNewGame] = useState(false);
@@ -275,6 +276,15 @@ export default function AdminPage() {
           )}
         >
           <Users size={14} /> שחקנים ({users.length})
+        </button>
+        <button
+          onClick={() => setActiveTab("payments")}
+          className={clsx(
+            "flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium transition-all",
+            activeTab === "payments" ? "bg-green-600 text-white" : "text-slate-500 hover:bg-slate-50"
+          )}
+        >
+          <CreditCard size={14} /> תשלומים
         </button>
       </div>
 
@@ -630,6 +640,9 @@ export default function AdminPage() {
           )}
         </div>
       )}
+
+      {/* Payments Tab */}
+      {activeTab === "payments" && <PaymentsTab />}
     </div>
   );
 }
