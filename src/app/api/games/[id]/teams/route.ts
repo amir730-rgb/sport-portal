@@ -14,7 +14,42 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     const { id: gameId } = await params;
-    const { numTeams = 2 } = await req.json();
+    const body = await req.json();
+
+    // Delete old teams first
+    await prisma.team.deleteMany({ where: { gameId } });
+
+    // ── Manual team assignment ──
+    if (body.manual && Array.isArray(body.teams)) {
+      const createdTeams = await Promise.all(
+        body.teams.map(async (t: { name: string; color: string; players: { userId: string; slotNote?: string | null }[] }) => {
+          return prisma.team.create({
+            data: {
+              gameId,
+              name: t.name,
+              color: t.color,
+              players: {
+                create: t.players.map((p) => ({
+                  userId: p.userId,
+                  slotNote: p.slotNote ?? null,
+                })),
+              },
+            },
+            include: {
+              players: {
+                include: {
+                  user: { select: { id: true, name: true, position: true, skillLevel: true } },
+                },
+              },
+            },
+          });
+        })
+      );
+      return NextResponse.json(createdTeams);
+    }
+
+    // ── Auto team generation (existing logic) ──
+    const { numTeams = 2 } = body;
 
     const rsvps = await prisma.rSVP.findMany({
       where: { gameId, status: "confirmed" },
@@ -26,14 +61,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const players = rsvps.map((r) => r.user);
     const teamGroups = divideTeams(players, numTeams);
 
-    // Delete old teams
-    await prisma.team.deleteMany({ where: { gameId } });
-
-    // Create new teams
     const createdTeams = await Promise.all(
       teamGroups.map(async (group, i) => {
         const teamColor = TEAM_COLORS[i % TEAM_COLORS.length];
-        const team = await prisma.team.create({
+        return prisma.team.create({
           data: {
             gameId,
             name: teamColor.name,
@@ -50,7 +81,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             },
           },
         });
-        return team;
       })
     );
 

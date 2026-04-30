@@ -10,7 +10,9 @@ import clsx from "clsx";
 import { positionsLabel } from "@/lib/teams";
 import DutyPicker from "@/components/DutyPicker";
 import PaymentsTab from "@/components/PaymentsTab";
-import { Pencil, X, Users, MapPin, Calendar, Shield, Trash2, Users2, ClipboardCheck, Lock, CreditCard } from "lucide-react";
+import PlayerRatingsTab from "@/components/PlayerRatingsTab";
+import TeamBuilderModal from "@/components/TeamBuilderModal";
+import { Pencil, X, Users, MapPin, Calendar, Shield, Trash2, Users2, ClipboardCheck, Lock, CreditCard, BarChart3 } from "lucide-react";
 
 type Game = {
   id: string;
@@ -39,7 +41,8 @@ type User = {
 export default function AdminPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"games" | "players" | "payments">("games");
+  const [activeTab, setActiveTab] = useState<"games" | "players" | "payments" | "ratings">("games");
+  const [teamBuilderGameId, setTeamBuilderGameId] = useState<string | null>(null);
   const [games, setGames] = useState<Game[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [showNewGame, setShowNewGame] = useState(false);
@@ -295,6 +298,15 @@ export default function AdminPage() {
         >
           <CreditCard size={14} /> תשלומים
         </button>
+        <button
+          onClick={() => setActiveTab("ratings")}
+          className={clsx(
+            "flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium transition-all",
+            activeTab === "ratings" ? "bg-green-600 text-white" : "text-slate-500 hover:bg-slate-50"
+          )}
+        >
+          <BarChart3 size={14} /> דירוגים
+        </button>
       </div>
 
       {/* Games Tab */}
@@ -460,11 +472,12 @@ export default function AdminPage() {
                     {game.status === "open" && (
                       <>
                         <button
-                          onClick={() => generateTeams(game.id)}
-                          disabled={loading || confirmed.length < 2}
+                          onClick={() => setTeamBuilderGameId(game.id)}
+                          disabled={confirmed.length < 2}
                           className="flex items-center gap-1 text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-3 py-1.5 rounded-lg font-medium transition-colors disabled:opacity-50"
+                          title="הרכב קבוצות ידנית"
                         >
-                          <Users size={12} /> חלק
+                          <Users size={12} /> הרכב
                         </button>
                         <button
                           onClick={() => closeGame(game.id)}
@@ -678,6 +691,31 @@ export default function AdminPage() {
 
       {/* Payments Tab */}
       {activeTab === "payments" && <PaymentsTab />}
+
+      {/* Player Ratings Tab */}
+      {activeTab === "ratings" && (
+        <div className="card">
+          <div className="flex items-center gap-2 mb-5">
+            <BarChart3 size={18} className="text-slate-600" />
+            <h2 className="font-bold text-slate-800 text-lg">דירוגי שחקנים</h2>
+          </div>
+          <PlayerRatingsTab />
+        </div>
+      )}
+
+      {/* Team Builder Modal */}
+      {teamBuilderGameId && (
+        <TeamBuilderModal
+          gameId={teamBuilderGameId}
+          gameLabel={(() => {
+            const g = games.find((g) => g.id === teamBuilderGameId);
+            if (!g) return "";
+            return format(new Date(g.date), "EEEE, d בMMM · HH:mm", { locale: he });
+          })()}
+          onClose={() => setTeamBuilderGameId(null)}
+          onSaved={() => { setTeamBuilderGameId(null); fetchGames(); }}
+        />
+      )}
     </div>
   );
 }

@@ -15,9 +15,12 @@ model User {
   password      String?
   role          String    @default("player") // "player" | "admin"
   position      String    @default("any")    // "goalkeeper" | "defender" | "midfielder" | "forward" | "any"
-  skillLevel    Int       @default(3)        // 1-5
-  fitnessLevel  Int       @default(3)        // 1-5
+  skillLevel    Int       @default(3)        // 1-5 (user-set)
+  fitnessLevel  Int       @default(3)        // 1-5 (user-set)
   phone         String?
+  adminSkillRating    Int     @default(3)    // 1-5 (admin-set, private)
+  adminFitnessRating  Int     @default(3)    // 1-5 (admin-set, private)
+  adminPositions      String  @default("[]") // JSON array (admin-set, private)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -116,9 +119,10 @@ model Team {
 }
 
 model TeamPlayer {
-  id     String @id @default(cuid())
-  teamId String
-  userId String
+  id       String  @id @default(cuid())
+  teamId   String
+  userId   String
+  slotNote String? // "שוער" | "שחקן משלים" | null
 
   team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

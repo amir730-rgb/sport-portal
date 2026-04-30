@@ -34,14 +34,17 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "אין הרשאה" }, { status: 403 });
     }
 
-    const { userId, role, skillLevel, position } = await req.json();
+    const { userId, role, skillLevel, position, adminSkillRating, adminFitnessRating, adminPositions } = await req.json();
 
     const user = await prisma.user.update({
       where: { id: userId },
       data: {
-        ...(role && { role }),
-        ...(skillLevel && { skillLevel }),
-        ...(position && { position }),
+        ...(role !== undefined && { role }),
+        ...(skillLevel !== undefined && { skillLevel }),
+        ...(position !== undefined && { position }),
+        ...(adminSkillRating !== undefined && { adminSkillRating }),
+        ...(adminFitnessRating !== undefined && { adminFitnessRating }),
+        ...(adminPositions !== undefined && { adminPositions }),
       },
     });
 
