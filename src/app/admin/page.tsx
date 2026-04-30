@@ -327,9 +327,8 @@ export default function AdminPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">שעה (24 שעות)</label>
-                    <div className="flex gap-1 items-center input px-2 py-0">
+                    <div className="flex gap-1 items-center input px-2 py-0" dir="ltr">
                       <select
-                        dir="ltr"
                         className="flex-1 bg-transparent border-none outline-none text-sm text-center py-2"
                         value={newGame.time.split(":")[0]}
                         onChange={(e) => setNewGame(p => ({ ...p, time: `${e.target.value}:${p.time.split(":")[1]}` }))}
@@ -340,7 +339,6 @@ export default function AdminPage() {
                       </select>
                       <span className="text-slate-400 font-bold text-lg">:</span>
                       <select
-                        dir="ltr"
                         className="flex-1 bg-transparent border-none outline-none text-sm text-center py-2"
                         value={newGame.time.split(":")[1]}
                         onChange={(e) => setNewGame(p => ({ ...p, time: `${p.time.split(":")[0]}:${e.target.value}` }))}
@@ -515,9 +513,8 @@ export default function AdminPage() {
                       </div>
                       <div>
                         <label className="input-label">שעה (24 שעות)</label>
-                        <div className="flex gap-1 items-center input px-2 py-0">
+                        <div className="flex gap-1 items-center input px-2 py-0" dir="ltr">
                           <select
-                            dir="ltr"
                             className="flex-1 bg-transparent border-none outline-none text-sm text-center py-2"
                             value={editGame.time.split(":")[0]}
                             onChange={(e) => setEditGame(p => ({ ...p, time: `${e.target.value}:${p.time.split(":")[1]}` }))}
@@ -528,7 +525,6 @@ export default function AdminPage() {
                           </select>
                           <span className="text-slate-400 font-bold text-lg">:</span>
                           <select
-                            dir="ltr"
                             className="flex-1 bg-transparent border-none outline-none text-sm text-center py-2"
                             value={editGame.time.split(":")[1]}
                             onChange={(e) => setEditGame(p => ({ ...p, time: `${p.time.split(":")[0]}:${e.target.value}` }))}
