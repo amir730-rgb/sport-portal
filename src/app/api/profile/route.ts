@@ -36,7 +36,7 @@ export async function PUT(req: NextRequest) {
     if (!session?.user) return NextResponse.json({ error: "לא מחובר" }, { status: 401 });
 
     const userId = (session.user as { id?: string }).id!;
-    const { name, position, skillLevel, phone, image } = await req.json();
+    const { name, position, skillLevel, fitnessLevel, phone, image } = await req.json();
 
     const user = await prisma.user.update({
       where: { id: userId },
@@ -44,6 +44,7 @@ export async function PUT(req: NextRequest) {
         ...(name && { name }),
         ...(position && { position }),
         ...(skillLevel && { skillLevel }),
+        ...(fitnessLevel && { fitnessLevel }),
         ...(phone !== undefined && { phone }),
         ...(image !== undefined && { image }),
       },

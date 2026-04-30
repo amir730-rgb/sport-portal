@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
   try {
-    const { name, email, password, position, skillLevel, phone } = await req.json();
+    const { name, email, password, position, skillLevel, fitnessLevel, phone } = await req.json();
 
     if (!name || !email || !password) {
       return NextResponse.json({ error: "שם, אימייל וסיסמה הם שדות חובה" }, { status: 400 });
@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
         password: hashedPassword,
         position: position || "any",
         skillLevel: skillLevel || 3,
+        fitnessLevel: fitnessLevel || 3,
         phone: phone || null,
       },
     });

@@ -7,7 +7,7 @@ import Link from "next/link";
 import toast from "react-hot-toast";
 import { POSITION_LABELS, encodePositions } from "@/lib/teams";
 import clsx from "clsx";
-import { User, Mail, Lock, Phone, Star, CheckCircle } from "lucide-react";
+import { User, Mail, Lock, Phone, Star, CheckCircle, Zap } from "lucide-react";
 
 const positions = ["goalkeeper", "defender", "midfielder", "forward", "any"];
 
@@ -27,6 +27,7 @@ export default function RegisterPage() {
     password: "",
     phone: "",
     skillLevel: 3,
+    fitnessLevel: 3,
   });
   const [selectedPositions, setSelectedPositions] = useState<string[]>(["any"]);
   const [loading, setLoading] = useState(false);
@@ -80,7 +81,8 @@ export default function RegisterPage() {
     }
   }
 
-  const skillLabels: Record<number, string> = { 1: "מתחיל", 2: "בסיסי", 3: "בינוני", 4: "מתקדם", 5: "מקצוען" };
+  const skillLabels: Record<number, string>    = { 1: "מתחיל",   2: "בסיסי",  3: "בינוני", 4: "מתקדם",  5: "מקצוען"  };
+  const fitnessLabels: Record<number, string>  = { 1: "סדנטרי",  2: "נמוך",   3: "בינוני", 4: "פעיל",   5: "ספורטאי" };
 
   return (
     <div className="min-h-screen bg-[#0f172a] flex items-center justify-center px-4 py-10">
@@ -224,6 +226,35 @@ export default function RegisterPage() {
               <div className="flex justify-between text-xs text-slate-500 mt-1.5 px-0.5">
                 <span>מתחיל</span>
                 <span>מקצוען</span>
+              </div>
+            </div>
+
+            {/* Fitness Level */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                רמת כושר גופני
+                <span className="text-green-400 font-normal mr-2">{fitnessLabels[form.fitnessLevel]}</span>
+              </label>
+              <div className="flex gap-1.5">
+                {[1, 2, 3, 4, 5].map((level) => (
+                  <button
+                    key={level}
+                    type="button"
+                    onClick={() => set("fitnessLevel", level)}
+                    className={clsx(
+                      "flex-1 flex items-center justify-center py-2.5 rounded-xl border transition-all cursor-pointer",
+                      form.fitnessLevel >= level
+                        ? "border-green-500/60 bg-green-500/15 text-green-400"
+                        : "border-white/10 bg-white/5 text-slate-600 hover:border-green-500/30"
+                    )}
+                  >
+                    <Zap size={14} fill={form.fitnessLevel >= level ? "currentColor" : "none"} />
+                  </button>
+                ))}
+              </div>
+              <div className="flex justify-between text-xs text-slate-500 mt-1.5 px-0.5">
+                <span>סדנטרי</span>
+                <span>ספורטאי</span>
               </div>
             </div>
 

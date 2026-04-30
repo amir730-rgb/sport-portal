@@ -9,6 +9,7 @@ import toast from "react-hot-toast";
 import clsx from "clsx";
 import { positionsLabel } from "@/lib/teams";
 import DutyPicker from "@/components/DutyPicker";
+import { Pencil, X, Users, MapPin, Calendar, Shield, Trash2, Users2, ClipboardCheck, Lock } from "lucide-react";
 
 type Game = {
   id: string;
@@ -47,6 +48,15 @@ export default function AdminPage() {
     location: "מגרש הכדורגל",
     maxPlayers: 14,
     notes: "",
+  });
+  const [editingGameId, setEditingGameId] = useState<string | null>(null);
+  const [editGame, setEditGame] = useState({
+    date: "",
+    time: "",
+    location: "",
+    maxPlayers: 14,
+    notes: "",
+    status: "open",
   });
   const [loading, setLoading] = useState(false);
 
@@ -91,7 +101,7 @@ export default function AdminPage() {
       }),
     });
     if (res.ok) {
-      toast.success("משחק נוצר! ⚽");
+              toast.success("משחק נוצר");
       setShowNewGame(false);
       setNewGame({ date: "", time: "19:00", location: "מגרש הכדורגל", maxPlayers: 14, notes: "" });
       fetchGames();
@@ -109,7 +119,7 @@ export default function AdminPage() {
       body: JSON.stringify({ numTeams: 2 }),
     });
     if (res.ok) {
-      toast.success("קבוצות נוצרו! ⚽");
+              toast.success("קבוצות נוצרו");
       fetchGames();
     } else {
       toast.error("שגיאה ביצירת קבוצות");
@@ -183,6 +193,44 @@ export default function AdminPage() {
     }
   }
 
+  function startEditGame(game: Game) {
+    const d = new Date(game.date);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    setEditGame({
+      date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+      time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+      location: game.location,
+      maxPlayers: game.maxPlayers,
+      notes: game.notes || "",
+      status: game.status,
+    });
+    setEditingGameId(game.id);
+  }
+
+  async function saveEditGame(e: React.FormEvent, gameId: string) {
+    e.preventDefault();
+    setLoading(true);
+    const res = await fetch(`/api/admin/games/${gameId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        date: `${editGame.date}T${editGame.time}:00`,
+        location: editGame.location,
+        maxPlayers: Number(editGame.maxPlayers),
+        notes: editGame.notes,
+        status: editGame.status,
+      }),
+    });
+    if (res.ok) {
+      toast.success("המשחק עודכן");
+      setEditingGameId(null);
+      fetchGames();
+    } else {
+      toast.error("שגיאה בעדכון");
+    }
+    setLoading(false);
+  }
+
   if (!isAdmin) return null;
 
   const statusColors: Record<string, string> = {
@@ -200,10 +248,12 @@ export default function AdminPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">⚙️ לוח ניהול</h1>
-          <p className="text-slate-500 text-sm mt-1">ניהול משחקים ושחקנים</p>
-        </div>
+      <div>
+        <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+          <Shield size={20} className="text-green-600" /> לוח ניהול
+        </h1>
+        <p className="text-slate-500 text-sm mt-1">ניהול משחקים ושחקנים</p>
+      </div>
       </div>
 
       {/* Tabs */}
@@ -211,20 +261,20 @@ export default function AdminPage() {
         <button
           onClick={() => setActiveTab("games")}
           className={clsx(
-            "flex-1 py-2.5 rounded-xl text-sm font-medium transition-all",
-            activeTab === "games" ? "bg-green-500 text-white" : "text-slate-500 hover:bg-slate-50"
+            "flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium transition-all",
+            activeTab === "games" ? "bg-green-600 text-white" : "text-slate-500 hover:bg-slate-50"
           )}
         >
-          ⚽ משחקים ({games.length})
+          <Calendar size={14} /> משחקים ({games.length})
         </button>
         <button
           onClick={() => setActiveTab("players")}
           className={clsx(
-            "flex-1 py-2.5 rounded-xl text-sm font-medium transition-all",
-            activeTab === "players" ? "bg-green-500 text-white" : "text-slate-500 hover:bg-slate-50"
+            "flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium transition-all",
+            activeTab === "players" ? "bg-green-600 text-white" : "text-slate-500 hover:bg-slate-50"
           )}
         >
-          👥 שחקנים ({users.length})
+          <Users size={14} /> שחקנים ({users.length})
         </button>
       </div>
 
@@ -242,7 +292,7 @@ export default function AdminPage() {
           {/* New Game Form */}
           {showNewGame && (
             <div className="card">
-              <h3 className="font-bold text-slate-800 mb-4">⚽ משחק חדש</h3>
+              <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><Calendar size={16} className="text-green-600" /> משחק חדש</h3>
               <form onSubmit={createGame} className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -310,7 +360,7 @@ export default function AdminPage() {
 
                 <div className="flex gap-2">
                   <button type="submit" disabled={loading} className="btn-primary flex-1">
-                    {loading ? "יוצר..." : "צור משחק ⚽"}
+                    {loading ? "יוצר..." : "צור משחק"}
                   </button>
                   <button
                     type="button"
@@ -328,52 +378,68 @@ export default function AdminPage() {
           {games.map((game) => {
             const confirmed = game.rsvps.filter(r => r.status === "confirmed");
             const dateObj = new Date(game.date);
+            const isEditing = editingGameId === game.id;
 
             return (
-              <div key={game.id} className="card">
+              <div key={game.id} className="card space-y-0">
+                {/* ── Game header ── */}
                 <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                       <span className={clsx("badge", statusColors[game.status])}>
                         {statusLabels[game.status]}
                       </span>
                       {game.survey?.isOpen && (
                         <span className="badge bg-purple-100 text-purple-700 animate-pulse">
-                          🗳️ סקר פתוח
+                          סקר פתוח
                         </span>
                       )}
                     </div>
                     <p className="font-bold text-slate-800">
                       {format(dateObj, "EEEE, d בMMM", { locale: he })} · {format(dateObj, "HH:mm")}
                     </p>
-                    <p className="text-sm text-slate-500">📍 {game.location}</p>
-                    <p className="text-sm text-slate-500 mt-0.5">
-                      👥 {confirmed.length}/{game.maxPlayers} שחקנים מאושרים
+                    <p className="text-sm text-slate-500 flex items-center gap-1 mt-0.5">
+                      <MapPin size={12} /> {game.location}
+                    </p>
+                    <p className="text-sm text-slate-500 flex items-center gap-1 mt-0.5">
+                      <Users2 size={12} /> {confirmed.length}/{game.maxPlayers} מאושרים
                     </p>
                     {game.teams.length > 0 && (
-                      <p className="text-xs text-green-600 mt-1">
-                        ✅ קבוצות חולקו ({game.teams.length} קבוצות)
+                      <p className="text-xs text-green-600 mt-1 font-medium">
+                        קבוצות חולקו ({game.teams.length})
                       </p>
                     )}
                   </div>
 
-                  {/* Actions */}
+                  {/* Actions column */}
                   <div className="flex flex-col gap-1.5 shrink-0">
+                    {/* Edit toggle */}
+                    <button
+                      onClick={() => isEditing ? setEditingGameId(null) : startEditGame(game)}
+                      className={clsx(
+                        "flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg font-medium transition-colors",
+                        isEditing
+                          ? "bg-slate-200 text-slate-600 hover:bg-slate-300"
+                          : "bg-blue-50 text-blue-700 hover:bg-blue-100"
+                      )}
+                    >
+                      {isEditing ? <><X size={12} /> ביטול</> : <><Pencil size={12} /> עריכה</>}
+                    </button>
                     {game.status === "open" && (
                       <>
                         <button
                           onClick={() => generateTeams(game.id)}
                           disabled={loading || confirmed.length < 2}
-                          className="text-xs bg-blue-100 text-blue-700 hover:bg-blue-200 px-3 py-1.5 rounded-lg font-medium transition-colors disabled:opacity-50"
+                          className="flex items-center gap-1 text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-3 py-1.5 rounded-lg font-medium transition-colors disabled:opacity-50"
                         >
-                          ⚽ חלק קבוצות
+                          <Users size={12} /> חלק
                         </button>
                         <button
                           onClick={() => closeGame(game.id)}
                           disabled={loading}
-                          className="text-xs bg-orange-100 text-orange-700 hover:bg-orange-200 px-3 py-1.5 rounded-lg font-medium transition-colors"
+                          className="flex items-center gap-1 text-xs bg-amber-50 text-amber-700 hover:bg-amber-100 px-3 py-1.5 rounded-lg font-medium transition-colors"
                         >
-                          🔒 סגור הרשמה
+                          <Lock size={12} /> סגור
                         </button>
                       </>
                     )}
@@ -381,27 +447,113 @@ export default function AdminPage() {
                       <button
                         onClick={() => openSurvey(game.id)}
                         disabled={loading}
-                        className="text-xs bg-purple-100 text-purple-700 hover:bg-purple-200 px-3 py-1.5 rounded-lg font-medium transition-colors"
+                        className="flex items-center gap-1 text-xs bg-purple-50 text-purple-700 hover:bg-purple-100 px-3 py-1.5 rounded-lg font-medium transition-colors"
                       >
-                        🗳️ פתח סקר
+                        <ClipboardCheck size={12} /> סקר
                       </button>
                     )}
                     <button
                       onClick={() => deleteGame(game.id)}
-                      className="text-xs bg-red-50 text-red-500 hover:bg-red-100 px-3 py-1.5 rounded-lg font-medium transition-colors"
+                      className="flex items-center gap-1 text-xs bg-red-50 text-red-500 hover:bg-red-100 px-3 py-1.5 rounded-lg font-medium transition-colors"
                     >
-                      🗑️ מחק
+                      <Trash2 size={12} /> מחק
                     </button>
                   </div>
                 </div>
 
+                {/* ── Inline Edit Form ── */}
+                {isEditing && (
+                  <form onSubmit={(e) => saveEditGame(e, game.id)} className="mt-4 pt-4 border-t border-slate-100 space-y-3">
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
+                      <Pencil size={11} /> עריכת פרטי המשחק
+                    </p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="input-label">תאריך</label>
+                        <input
+                          type="date"
+                          className="input"
+                          value={editGame.date}
+                          onChange={(e) => setEditGame(p => ({ ...p, date: e.target.value }))}
+                          required
+                          dir="ltr"
+                        />
+                      </div>
+                      <div>
+                        <label className="input-label">שעה</label>
+                        <input
+                          type="time"
+                          className="input"
+                          value={editGame.time}
+                          onChange={(e) => setEditGame(p => ({ ...p, time: e.target.value }))}
+                          required
+                          dir="ltr"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="input-label">מיקום</label>
+                      <input
+                        className="input"
+                        value={editGame.location}
+                        onChange={(e) => setEditGame(p => ({ ...p, location: e.target.value }))}
+                        required
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="input-label">מקסימום שחקנים</label>
+                        <input
+                          type="number"
+                          min="4"
+                          max="30"
+                          className="input"
+                          value={editGame.maxPlayers}
+                          onChange={(e) => setEditGame(p => ({ ...p, maxPlayers: +e.target.value }))}
+                          dir="ltr"
+                        />
+                      </div>
+                      <div>
+                        <label className="input-label">סטטוס</label>
+                        <select
+                          className="input"
+                          value={editGame.status}
+                          onChange={(e) => setEditGame(p => ({ ...p, status: e.target.value }))}
+                        >
+                          <option value="open">פתוח</option>
+                          <option value="closed">סגור</option>
+                          <option value="completed">הסתיים</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="input-label">הערות <span className="text-slate-400 font-normal">(אופציונלי)</span></label>
+                      <textarea
+                        className="input resize-none"
+                        rows={2}
+                        value={editGame.notes}
+                        onChange={(e) => setEditGame(p => ({ ...p, notes: e.target.value }))}
+                        placeholder="הערות..."
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button type="submit" disabled={loading} className="btn-primary flex-1 text-sm py-2">
+                        {loading ? "שומר..." : "שמור שינויים"}
+                      </button>
+                      <button type="button" onClick={() => setEditingGameId(null)} className="btn-secondary text-sm py-2">
+                        ביטול
+                      </button>
+                    </div>
+                  </form>
+                )}
+
                 {/* Confirmed players list */}
-                {confirmed.length > 0 && (
+                {confirmed.length > 0 && !isEditing && (
                   <div className="mt-3 pt-3 border-t border-slate-100">
-                    <p className="text-xs text-slate-500 mb-2 font-medium">שחקנים מאושרים:</p>
+                    <p className="section-title">שחקנים מאושרים</p>
                     <div className="flex flex-wrap gap-1.5">
                       {confirmed.map((r) => (
-                        <span key={r.user.id} className="text-xs bg-green-50 text-green-700 px-2.5 py-1 rounded-full">
+                        <span key={r.user.id} className="text-xs bg-green-50 text-green-700 px-2.5 py-1 rounded-full border border-green-100">
                           {r.user.name}
                         </span>
                       ))}
@@ -410,12 +562,14 @@ export default function AdminPage() {
                 )}
 
                 {/* Duty assignments */}
-                <DutyPicker
-                  gameId={game.id}
-                  players={confirmed.map((r) => r.user)}
-                  duties={game.duties}
-                  onUpdate={fetchGames}
-                />
+                {!isEditing && (
+                  <DutyPicker
+                    gameId={game.id}
+                    players={confirmed.map((r) => r.user)}
+                    duties={game.duties}
+                    onUpdate={fetchGames}
+                  />
+                )}
               </div>
             );
           })}
@@ -439,7 +593,7 @@ export default function AdminPage() {
                 <div className="flex items-center gap-2">
                   <p className="font-semibold text-slate-800 truncate">{user.name || "ללא שם"}</p>
                   {user.role === "admin" && (
-                    <span className="badge bg-purple-100 text-purple-700 text-xs">מנהל</span>
+                    <span className="badge bg-purple-100 text-purple-700 text-xs flex items-center gap-1"><Shield size={10} /> מנהל</span>
                   )}
                 </div>
                 <p className="text-xs text-slate-400 truncate">{user.email}</p>
@@ -463,9 +617,9 @@ export default function AdminPage() {
                 </button>
                 <button
                   onClick={() => deleteUser(user.id, user.name)}
-                  className="text-xs px-3 py-1.5 rounded-lg font-medium bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
+                  className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg font-medium bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
                 >
-                  🗑️ מחק
+                  <Trash2 size={12} /> מחק
                 </button>
               </div>
             </div>

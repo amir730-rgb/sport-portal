@@ -8,6 +8,7 @@ import { he } from "date-fns/locale";
 import toast from "react-hot-toast";
 import clsx from "clsx";
 import { POSITION_LABELS, POSITION_ICONS, parsePositions, encodePositions, positionsLabel, positionsIcon } from "@/lib/teams";
+import { Star, Zap, Loader2 } from "lucide-react";
 
 const positions = ["goalkeeper", "defender", "midfielder", "forward", "any"];
 
@@ -18,6 +19,7 @@ type UserProfile = {
   phone: string | null;
   position: string;
   skillLevel: number;
+  fitnessLevel: number;
   image: string | null;
   role: string;
   rsvps: Array<{
@@ -37,7 +39,7 @@ export default function ProfilePage() {
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ name: "", phone: "", skillLevel: 3 });
+  const [form, setForm] = useState({ name: "", phone: "", skillLevel: 3, fitnessLevel: 3 });
   const [selectedPositions, setSelectedPositions] = useState<string[]>(["any"]);
   const [loading, setLoading] = useState(false);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
@@ -73,6 +75,7 @@ export default function ProfilePage() {
         name: data.name || "",
         phone: data.phone || "",
         skillLevel: data.skillLevel,
+        fitnessLevel: data.fitnessLevel ?? 3,
       });
       setSelectedPositions(parsePositions(data.position));
     }
@@ -87,7 +90,7 @@ export default function ProfilePage() {
       body: JSON.stringify({ ...form, position: encodePositions(selectedPositions) }),
     });
     if (res.ok) {
-      toast.success("הפרופיל עודכן! ✅");
+      toast.success("הפרופיל עודכן");
       setEditing(false);
       fetchProfile();
       update({ name: form.name });
@@ -97,10 +100,13 @@ export default function ProfilePage() {
     setLoading(false);
   }
 
+  const skillLabels: Record<number, string>    = { 1: "מתחיל",  2: "בסיסי", 3: "בינוני", 4: "מתקדם", 5: "מקצוען"  };
+  const fitnessLabels: Record<number, string>  = { 1: "סדנטרי", 2: "נמוך",  3: "בינוני", 4: "פעיל",  5: "ספורטאי" };
+
   if (!profile) {
     return (
       <div className="flex justify-center items-center min-h-64">
-        <div className="text-4xl animate-bounce">⚽</div>
+        <Loader2 size={28} className="text-green-500 animate-spin" />
       </div>
     );
   }
@@ -132,7 +138,7 @@ export default function ProfilePage() {
                   {positionsIcon(profile.position)} {positionsLabel(profile.position)}
                 </span>
                 {profile.role === "admin" && (
-                  <span className="badge bg-purple-100 text-purple-700">⚙️ מנהל</span>
+                  <span className="badge bg-purple-100 text-purple-700">מנהל</span>
                 )}
               </div>
             </div>
@@ -141,17 +147,29 @@ export default function ProfilePage() {
             onClick={() => setEditing(!editing)}
             className="btn-secondary text-sm"
           >
-            {editing ? "ביטול" : "✏️ עריכה"}
+            {editing ? "ביטול" : "עריכה"}
           </button>
         </div>
 
-        {/* Skill level */}
-        <div className="mt-4 flex items-center gap-2">
-          <span className="text-sm text-slate-500">רמה:</span>
-          <div className="flex gap-0.5">
-            {[1,2,3,4,5].map(n => (
-              <span key={n} className={n <= profile.skillLevel ? "text-yellow-400" : "text-slate-200"}>⭐</span>
-            ))}
+        {/* Skill + Fitness level */}
+        <div className="mt-4 flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-slate-400 font-medium">משחק:</span>
+            <div className="flex gap-0.5">
+              {[1,2,3,4,5].map(n => (
+                <Star key={n} size={12} fill={n <= profile.skillLevel ? "#facc15" : "none"} stroke={n <= profile.skillLevel ? "#facc15" : "#e2e8f0"} />
+              ))}
+            </div>
+            <span className="text-xs text-slate-500">{skillLabels[profile.skillLevel]}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-slate-400 font-medium">כושר:</span>
+            <div className="flex gap-0.5">
+              {[1,2,3,4,5].map(n => (
+                <Zap key={n} size={12} fill={n <= (profile.fitnessLevel ?? 3) ? "#22c55e" : "none"} stroke={n <= (profile.fitnessLevel ?? 3) ? "#22c55e" : "#e2e8f0"} />
+              ))}
+            </div>
+            <span className="text-xs text-slate-500">{fitnessLabels[profile.fitnessLevel ?? 3]}</span>
           </div>
           {profile.phone && (
             <span className="text-sm text-slate-400 mr-auto">📱 {profile.phone}</span>
@@ -162,7 +180,7 @@ export default function ProfilePage() {
       {/* Edit Form */}
       {editing && (
         <div className="card">
-          <h2 className="font-bold text-slate-800 mb-4">✏️ עריכת פרופיל</h2>
+          <h2 className="font-bold text-slate-800 mb-4">עריכת פרופיל</h2>
           <form onSubmit={saveProfile} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">שם</label>
@@ -220,36 +238,59 @@ export default function ProfilePage() {
               )}
             </div>
 
+            {/* Skill level */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 רמת משחק
+                <span className="text-green-600 font-normal mr-2">{skillLabels[form.skillLevel]}</span>
               </label>
-              <div className="flex gap-2">
+              <div className="flex gap-1.5">
                 {[1,2,3,4,5].map(level => (
                   <button
                     key={level}
                     type="button"
                     onClick={() => setForm(p => ({ ...p, skillLevel: level }))}
                     className={clsx(
-                      "flex-1 py-2.5 rounded-xl border-2 text-sm font-bold transition-all cursor-pointer select-none",
-                      form.skillLevel === level
-                        ? "border-green-500 bg-green-500 text-white shadow-sm"
-                        : "border-slate-200 bg-white text-slate-400 hover:border-green-300"
+                      "flex-1 flex items-center justify-center py-2.5 rounded-xl border transition-all cursor-pointer",
+                      form.skillLevel >= level
+                        ? "border-yellow-400/60 bg-yellow-400/10 text-yellow-500"
+                        : "border-slate-200 text-slate-300 hover:border-yellow-300"
                     )}
                   >
-                    {level}
+                    <Star size={15} fill={form.skillLevel >= level ? "currentColor" : "none"} />
                   </button>
                 ))}
               </div>
-              <div className="flex gap-2 mt-1.5">
+              <div className="flex justify-between text-xs text-slate-400 mt-1 px-0.5">
+                <span>מתחיל</span><span>מקצוען</span>
+              </div>
+            </div>
+
+            {/* Fitness level */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                רמת כושר גופני
+                <span className="text-green-600 font-normal mr-2">{fitnessLabels[form.fitnessLevel]}</span>
+              </label>
+              <div className="flex gap-1.5">
                 {[1,2,3,4,5].map(level => (
-                  <div key={level} className="flex-1 flex justify-center">
-                    <span className={clsx(
-                      "text-sm",
-                      form.skillLevel >= level ? "text-yellow-400" : "text-slate-200"
-                    )}>⭐</span>
-                  </div>
+                  <button
+                    key={level}
+                    type="button"
+                    onClick={() => setForm(p => ({ ...p, fitnessLevel: level }))}
+                    className={clsx(
+                      "flex-1 flex items-center justify-center py-2.5 rounded-xl border transition-all cursor-pointer",
+                      form.fitnessLevel >= level
+                        ? "border-green-500/60 bg-green-500/10 text-green-600"
+                        : "border-slate-200 text-slate-300 hover:border-green-300"
+                    )}
+                  >
+                    <Zap size={14} fill={form.fitnessLevel >= level ? "currentColor" : "none"} />
+                  </button>
                 ))}
+              </div>
+              <div className="flex justify-between text-xs text-slate-400 mt-1 px-0.5">
+                <span>סדנטרי</span><span>ספורטאי</span>
               </div>
             </div>
 
@@ -263,13 +304,12 @@ export default function ProfilePage() {
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: "משחקים ששיחקתי", value: gamesPlayed, icon: "⚽" },
-          { label: "שחקן המשחק", value: mvpCount, icon: "⭐" },
-          { label: "אישרתי הגעה", value: confirmed, icon: "✅" },
-          { label: "אחוז נוכחות", value: `${attendanceRate}%`, icon: "📊" },
+          { label: "משחקים ששיחקתי", value: gamesPlayed },
+          { label: "שחקן המשחק", value: mvpCount },
+          { label: "אישרתי הגעה", value: confirmed },
+          { label: "אחוז נוכחות", value: `${attendanceRate}%` },
         ].map((stat) => (
           <div key={stat.label} className="card text-center">
-            <div className="text-3xl mb-1">{stat.icon}</div>
             <div className="text-2xl font-bold text-slate-800">{stat.value}</div>
             <div className="text-xs text-slate-500 mt-0.5">{stat.label}</div>
           </div>
@@ -279,7 +319,7 @@ export default function ProfilePage() {
       {/* Change Password */}
       <div className="card">
         <div className="flex items-center justify-between">
-          <h2 className="font-bold text-slate-800">🔐 שינוי סיסמה</h2>
+          <h2 className="font-bold text-slate-800">שינוי סיסמה</h2>
           <button
             onClick={() => setShowPasswordForm(!showPasswordForm)}
             className="text-sm text-slate-500 hover:text-slate-700"
