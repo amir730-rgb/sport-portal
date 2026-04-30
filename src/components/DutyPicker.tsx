@@ -3,13 +3,14 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { DUTY_CONFIG } from "./DutyBadges";
+import { RotateCcw } from "lucide-react";
 
 type Player = { id: string; name: string | null };
 type Duty = { type: string; user: { id: string; name: string | null } };
 
 type Props = {
   gameId: string;
-  players: Player[];        // confirmed players
+  players: Player[];
   duties: Duty[];
   onUpdate: () => void;
 };
@@ -26,10 +27,10 @@ export default function DutyPicker({ gameId, players, duties, onUpdate }: Props)
         body: JSON.stringify({ type, userId: userId || null }),
       });
       if (res.ok) {
-        const cfg = DUTY_CONFIG[type as keyof typeof DUTY_CONFIG];
+        const cfg = DUTY_CONFIG[type];
         if (userId) {
           const player = players.find((p) => p.id === userId);
-          toast.success(`${cfg.emoji} ${player?.name} - ${cfg.label}`);
+          toast.success(`${cfg.label}: ${player?.name}`);
         } else {
           toast.success("תורנות הוסרה");
         }
@@ -44,13 +45,15 @@ export default function DutyPicker({ gameId, players, duties, onUpdate }: Props)
 
   return (
     <div className="space-y-3 pt-3 border-t border-slate-100">
-      <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">🔄 תורנויות</p>
+      <p className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
+        <RotateCcw size={11} /> תורנויות
+      </p>
       {Object.entries(DUTY_CONFIG).map(([type, cfg]) => {
         const current = duties.find((d) => d.type === type);
         return (
           <div key={type} className="flex items-center gap-2">
-            <div className={`flex items-center gap-1.5 text-sm font-medium min-w-[130px] px-2.5 py-1.5 rounded-lg ${cfg.bg} ${cfg.text}`}>
-              <span>{cfg.emoji}</span>
+            <div className={`flex items-center gap-1.5 text-sm font-medium min-w-[140px] px-2.5 py-1.5 rounded-lg ${cfg.bg} ${cfg.text}`}>
+              <cfg.Icon size={13} />
               <span>{cfg.label}</span>
             </div>
             <select
@@ -61,9 +64,7 @@ export default function DutyPicker({ gameId, players, duties, onUpdate }: Props)
             >
               <option value="">— ללא תורנות —</option>
               {players.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
+                <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </select>
           </div>
