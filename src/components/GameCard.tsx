@@ -23,6 +23,8 @@ import {
   ClipboardCheck,
   Trophy,
   RotateCcw,
+  Banknote,
+  AlertCircle,
 } from "lucide-react";
 
 type Game = {
@@ -54,6 +56,7 @@ type Props = {
   userId: string;
   onUpdate: () => void;
   isPast?: boolean;
+  paymentStatus?: boolean | null; // true=paid, false=unpaid, null/undefined=no info
 };
 
 const STATUS_CONFIG: Record<string, { label: string; cls: string; dot: string }> = {
@@ -62,7 +65,7 @@ const STATUS_CONFIG: Record<string, { label: string; cls: string; dot: string }>
   completed: { label: "הסתיים",        cls: "badge-slate",  dot: "bg-slate-400" },
 };
 
-export default function GameCard({ game, userId, onUpdate, isPast = false }: Props) {
+export default function GameCard({ game, userId, onUpdate, isPast = false, paymentStatus }: Props) {
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
@@ -126,6 +129,17 @@ export default function GameCard({ game, userId, onUpdate, isPast = false }: Pro
             {isToday(dateObj) && (
               <span className="badge bg-red-500 text-white animate-pulse border-0 text-[11px] font-bold px-2">
                 היום
+              </span>
+            )}
+            {/* Payment status badge — only for confirmed players */}
+            {myRsvp?.status === "confirmed" && paymentStatus === true && (
+              <span className="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-semibold px-2 py-0.5 rounded-full">
+                <Banknote size={10} /> שולם
+              </span>
+            )}
+            {myRsvp?.status === "confirmed" && paymentStatus === false && (
+              <span className="inline-flex items-center gap-1 bg-red-50 border border-red-200 text-red-600 text-[11px] font-semibold px-2 py-0.5 rounded-full">
+                <AlertCircle size={10} /> לא שולם
               </span>
             )}
           </div>

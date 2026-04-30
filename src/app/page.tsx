@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { format, isPast, isToday, isTomorrow } from "date-fns";
 import { he } from "date-fns/locale";
 import GameCard from "@/components/GameCard";
-import { Calendar, Clock, MapPin, Loader2 } from "lucide-react";
+import { Calendar, Clock, MapPin, Loader2, AlertTriangle, Banknote } from "lucide-react";
 
 type Game = {
   id: string;
@@ -32,10 +32,18 @@ type Game = {
   _count: { posts: number; photos: number };
 };
 
+type PaymentEntry = {
+  gameId: string;
+  paid: boolean;
+  paidAt: string | null;
+};
+
 export default function HomePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [games, setGames] = useState<Game[]>([]);
+  const [paymentMap, setPaymentMap] = useState<Record<string, boolean>>({});
+  const [unpaidCount, setUnpaidCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -43,7 +51,10 @@ export default function HomePage() {
   }, [status, router]);
 
   useEffect(() => {
-    if (session) fetchGames();
+    if (session) {
+      fetchGames();
+      fetchMyPayments();
+    }
   }, [session]);
 
   async function fetchGames() {
@@ -55,6 +66,20 @@ export default function HomePage() {
       setGames([]);
     }
     setLoading(false);
+  }
+
+  async function fetchMyPayments() {
+    try {
+      const res = await fetch("/api/my-payments");
+      if (!res.ok) return;
+      const data = await res.json();
+      const map: Record<string, boolean> = {};
+      (data.payments as PaymentEntry[]).forEach((p) => { map[p.gameId] = p.paid; });
+      setPaymentMap(map);
+      setUnpaidCount(data.unpaidCount ?? 0);
+    } catch {
+      // silently ignore — payment data is optional
+    }
   }
 
   if (status === "loading" || loading) {
@@ -76,6 +101,22 @@ export default function HomePage() {
 
   return (
     <div className="space-y-6">
+
+      {/* ── Debt warning banner ── */}
+      {unpaidCount > 0 && (
+        <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-2xl px-4 py-3.5">
+          <AlertTriangle size={18} className="text-red-500 shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-red-700">
+              יש לך {unpaidCount} {unpaidCount === 1 ? "משחק" : "משחקים"} ללא תשלום
+            </p>
+            <p className="text-xs text-red-500 mt-0.5">
+              עדכן את המנהל לאחר שתשלם
+            </p>
+          </div>
+          <Banknote size={16} className="text-red-400 shrink-0 mt-0.5" />
+        </div>
+      )}
 
       {/* ── Hero banner ── */}
       <div className="relative bg-[#0f172a] rounded-2xl overflow-hidden">
@@ -115,7 +156,13 @@ export default function HomePage() {
           </h2>
           <div className="space-y-3">
             {upcoming.map((game) => (
-              <GameCard key={game.id} game={game} userId={userId} onUpdate={fetchGames} />
+              <GameCard
+                key={game.id}
+                game={game}
+                userId={userId}
+                onUpdate={fetchGames}
+                paymentStatus={game.id in paymentMap ? paymentMap[game.id] : null}
+              />
             ))}
           </div>
         </section>
@@ -130,7 +177,14 @@ export default function HomePage() {
           </h2>
           <div className="space-y-3">
             {past.slice(0, 5).map((game) => (
-              <GameCard key={game.id} game={game} userId={userId} onUpdate={fetchGames} isPast />
+              <GameCard
+                key={game.id}
+                game={game}
+                userId={userId}
+                onUpdate={fetchGames}
+                isPast
+                paymentStatus={game.id in paymentMap ? paymentMap[game.id] : null}
+              />
             ))}
           </div>
         </section>
