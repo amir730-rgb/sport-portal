@@ -90,12 +90,13 @@ export default function AdminPage() {
   async function createGame(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    const dateTime = `${newGame.date}T${newGame.time}:00`;
+    // Convert local time to ISO (UTC) before sending to server
+    const localDate = new Date(`${newGame.date}T${newGame.time}:00`);
     const res = await fetch("/api/games", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        date: dateTime,
+        date: localDate.toISOString(),
         location: newGame.location,
         maxPlayers: newGame.maxPlayers,
         notes: newGame.notes,
@@ -195,11 +196,17 @@ export default function AdminPage() {
   }
 
   function startEditGame(game: Game) {
+    // Use LOCAL time methods so the inputs show the correct local time
     const d = new Date(game.date);
     const pad = (n: number) => String(n).padStart(2, "0");
+    // Round minutes to nearest 15 (since the select only has 00/15/30/45)
+    const rawMin = d.getMinutes();
+    const roundedMin = Math.round(rawMin / 15) * 15;
+    const finalMin = roundedMin >= 60 ? 0 : roundedMin;
+    const finalHour = roundedMin >= 60 ? Math.min(d.getHours() + 1, 23) : d.getHours();
     setEditGame({
       date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
-      time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+      time: `${pad(finalHour)}:${pad(finalMin)}`,
       location: game.location,
       maxPlayers: game.maxPlayers,
       notes: game.notes || "",
@@ -211,11 +218,13 @@ export default function AdminPage() {
   async function saveEditGame(e: React.FormEvent, gameId: string) {
     e.preventDefault();
     setLoading(true);
+    // Build a Date from LOCAL time inputs, then convert to ISO (UTC) for the server
+    const localDate = new Date(`${editGame.date}T${editGame.time}:00`);
     const res = await fetch(`/api/admin/games/${gameId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        date: `${editGame.date}T${editGame.time}:00`,
+        date: localDate.toISOString(),
         location: editGame.location,
         maxPlayers: Number(editGame.maxPlayers),
         notes: editGame.notes,
@@ -317,15 +326,30 @@ export default function AdminPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">שעה</label>
-                    <input
-                      type="time"
-                      className="input"
-                      value={newGame.time}
-                      onChange={(e) => setNewGame(p => ({ ...p, time: e.target.value }))}
-                      required
-                      dir="ltr"
-                    />
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">שעה (24 שעות)</label>
+                    <div className="flex gap-1 items-center input px-2 py-0">
+                      <select
+                        dir="ltr"
+                        className="flex-1 bg-transparent border-none outline-none text-sm text-center py-2"
+                        value={newGame.time.split(":")[0]}
+                        onChange={(e) => setNewGame(p => ({ ...p, time: `${e.target.value}:${p.time.split(":")[1]}` }))}
+                      >
+                        {Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0")).map(h => (
+                          <option key={h} value={h}>{h}</option>
+                        ))}
+                      </select>
+                      <span className="text-slate-400 font-bold text-lg">:</span>
+                      <select
+                        dir="ltr"
+                        className="flex-1 bg-transparent border-none outline-none text-sm text-center py-2"
+                        value={newGame.time.split(":")[1]}
+                        onChange={(e) => setNewGame(p => ({ ...p, time: `${p.time.split(":")[0]}:${e.target.value}` }))}
+                      >
+                        {["00", "15", "30", "45"].map(m => (
+                          <option key={m} value={m}>{m}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                 </div>
 
@@ -490,15 +514,30 @@ export default function AdminPage() {
                         />
                       </div>
                       <div>
-                        <label className="input-label">שעה</label>
-                        <input
-                          type="time"
-                          className="input"
-                          value={editGame.time}
-                          onChange={(e) => setEditGame(p => ({ ...p, time: e.target.value }))}
-                          required
-                          dir="ltr"
-                        />
+                        <label className="input-label">שעה (24 שעות)</label>
+                        <div className="flex gap-1 items-center input px-2 py-0">
+                          <select
+                            dir="ltr"
+                            className="flex-1 bg-transparent border-none outline-none text-sm text-center py-2"
+                            value={editGame.time.split(":")[0]}
+                            onChange={(e) => setEditGame(p => ({ ...p, time: `${e.target.value}:${p.time.split(":")[1]}` }))}
+                          >
+                            {Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0")).map(h => (
+                              <option key={h} value={h}>{h}</option>
+                            ))}
+                          </select>
+                          <span className="text-slate-400 font-bold text-lg">:</span>
+                          <select
+                            dir="ltr"
+                            className="flex-1 bg-transparent border-none outline-none text-sm text-center py-2"
+                            value={editGame.time.split(":")[1]}
+                            onChange={(e) => setEditGame(p => ({ ...p, time: `${p.time.split(":")[0]}:${e.target.value}` }))}
+                          >
+                            {["00", "15", "30", "45"].map(m => (
+                              <option key={m} value={m}>{m}</option>
+                            ))}
+                          </select>
+                        </div>
                       </div>
                     </div>
                     <div>
