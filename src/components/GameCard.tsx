@@ -134,12 +134,12 @@ export default function GameCard({ game, userId, onUpdate, isPast = false, payme
             {/* Payment status badge — only for confirmed players */}
             {myRsvp?.status === "confirmed" && paymentStatus === true && (
               <span className="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-semibold px-2 py-0.5 rounded-full">
-                <Banknote size={10} /> שולם
+                <Banknote size={10} /> שולם ₪35
               </span>
             )}
             {myRsvp?.status === "confirmed" && paymentStatus === false && (
               <span className="inline-flex items-center gap-1 bg-red-50 border border-red-200 text-red-600 text-[11px] font-semibold px-2 py-0.5 rounded-full">
-                <AlertCircle size={10} /> לא שולם
+                <AlertCircle size={10} /> חוב ₪35
               </span>
             )}
           </div>

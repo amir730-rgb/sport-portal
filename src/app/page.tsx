@@ -44,6 +44,7 @@ export default function HomePage() {
   const [games, setGames] = useState<Game[]>([]);
   const [paymentMap, setPaymentMap] = useState<Record<string, boolean>>({});
   const [unpaidCount, setUnpaidCount] = useState(0);
+  const [totalDebt, setTotalDebt] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -77,6 +78,7 @@ export default function HomePage() {
       (data.payments as PaymentEntry[]).forEach((p) => { map[p.gameId] = p.paid; });
       setPaymentMap(map);
       setUnpaidCount(data.unpaidCount ?? 0);
+      setTotalDebt(data.totalDebt ?? 0);
     } catch {
       // silently ignore — payment data is optional
     }
@@ -108,10 +110,11 @@ export default function HomePage() {
           <AlertTriangle size={18} className="text-red-500 shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-red-700">
-              יש לך {unpaidCount} {unpaidCount === 1 ? "משחק" : "משחקים"} ללא תשלום
+              יש לך חוב של{" "}
+              <span className="text-base font-black">₪{totalDebt}</span>
             </p>
             <p className="text-xs text-red-500 mt-0.5">
-              עדכן את המנהל לאחר שתשלם
+              {unpaidCount} {unpaidCount === 1 ? "משחק" : "משחקים"} × ₪35 — עדכן את המנהל לאחר שתשלם
             </p>
           </div>
           <Banknote size={16} className="text-red-400 shrink-0 mt-0.5" />

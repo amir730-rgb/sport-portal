@@ -51,9 +51,11 @@ export async function GET() {
       };
     });
 
+    const GAME_COST = 35; // ₪ per game
     const unpaidCount = payments.filter((p) => !p.paid).length;
+    const totalDebt   = unpaidCount * GAME_COST;
 
-    return NextResponse.json({ payments, unpaidCount });
+    return NextResponse.json({ payments, unpaidCount, totalDebt });
   } catch {
     return NextResponse.json({ error: "שגיאת שרת" }, { status: 500 });
   }
