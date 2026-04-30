@@ -12,7 +12,7 @@ import DutyPicker from "@/components/DutyPicker";
 import PaymentsTab from "@/components/PaymentsTab";
 import PlayerRatingsTab from "@/components/PlayerRatingsTab";
 import TeamBuilderModal from "@/components/TeamBuilderModal";
-import { Pencil, X, Users, MapPin, Calendar, Shield, Trash2, Users2, ClipboardCheck, Lock, CreditCard, BarChart3 } from "lucide-react";
+import { Pencil, X, Users, MapPin, Calendar, Shield, Trash2, Users2, ClipboardCheck, Lock, CreditCard, BarChart3, UserPlus, UserMinus } from "lucide-react";
 
 type Game = {
   id: string;
@@ -64,6 +64,9 @@ export default function AdminPage() {
     status: "open",
   });
   const [loading, setLoading] = useState(false);
+  // gameId → userId being added on behalf of
+  const [addingPlayerFor, setAddingPlayerFor] = useState<string | null>(null);
+  const [addPlayerUserId, setAddPlayerUserId] = useState("");
 
   const sessionUser = session?.user as { role?: string } | undefined;
   const isAdmin = sessionUser?.role === "admin";
@@ -185,6 +188,42 @@ export default function AdminPage() {
       toast.success("משחק נמחק");
       fetchGames();
     }
+  }
+
+  async function adminRemoveRsvp(gameId: string, userId: string, playerName: string) {
+    if (!confirm(`להסיר את ${playerName} מהמשחק?`)) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/admin/games/${gameId}/rsvp`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+      if (res.ok) { toast.success(`${playerName} הוסר מהמשחק`); fetchGames(); }
+      else { const d = await res.json(); toast.error(d.error); }
+    } catch { toast.error("שגיאה"); }
+    finally { setLoading(false); }
+  }
+
+  async function adminAddRsvp(gameId: string) {
+    if (!addPlayerUserId) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/admin/games/${gameId}/rsvp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: addPlayerUserId }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        const name = users.find(u => u.id === addPlayerUserId)?.name ?? "שחקן";
+        toast.success(data.isWaitlist ? `${name} נוסף לרשימת המתנה` : `${name} אושר למשחק`);
+        setAddingPlayerFor(null);
+        setAddPlayerUserId("");
+        fetchGames();
+      } else { toast.error(data.error); }
+    } catch { toast.error("שגיאה"); }
+    finally { setLoading(false); }
   }
 
   async function updateUserRole(userId: string, role: string) {
@@ -645,16 +684,72 @@ export default function AdminPage() {
                 )}
 
                 {/* Confirmed players list */}
-                {confirmed.length > 0 && !isEditing && (
-                  <div className="mt-3 pt-3 border-t border-slate-100">
-                    <p className="section-title">שחקנים מאושרים</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {confirmed.map((r) => (
-                        <span key={r.user.id} className="text-xs bg-green-50 text-green-700 px-2.5 py-1 rounded-full border border-green-100">
-                          {r.user.name}
-                        </span>
-                      ))}
+                {!isEditing && (
+                  <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="section-title">שחקנים מאושרים ({confirmed.length})</p>
+                      <button
+                        onClick={() => {
+                          setAddingPlayerFor(addingPlayerFor === game.id ? null : game.id);
+                          setAddPlayerUserId("");
+                        }}
+                        className="flex items-center gap-1 text-xs text-green-700 hover:text-green-800 font-medium"
+                      >
+                        <UserPlus size={12} /> הוסף שחקן
+                      </button>
                     </div>
+
+                    {/* Add player inline form */}
+                    {addingPlayerFor === game.id && (
+                      <div className="flex gap-2 items-center bg-green-50 border border-green-100 rounded-xl px-3 py-2">
+                        <select
+                          className="flex-1 text-xs bg-transparent border-none outline-none text-slate-700"
+                          value={addPlayerUserId}
+                          onChange={(e) => setAddPlayerUserId(e.target.value)}
+                        >
+                          <option value="">בחר שחקן...</option>
+                          {users
+                            .filter((u) => !game.rsvps.some((r) => r.user.id === u.id))
+                            .map((u) => (
+                              <option key={u.id} value={u.id}>{u.name}</option>
+                            ))}
+                        </select>
+                        <button
+                          onClick={() => adminAddRsvp(game.id)}
+                          disabled={!addPlayerUserId || loading}
+                          className="text-xs bg-green-600 text-white px-2.5 py-1 rounded-lg font-medium disabled:opacity-40 hover:bg-green-700 transition-colors"
+                        >
+                          אשר
+                        </button>
+                        <button
+                          onClick={() => { setAddingPlayerFor(null); setAddPlayerUserId(""); }}
+                          className="text-slate-400 hover:text-slate-600"
+                        >
+                          <X size={13} />
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Player chips with remove button */}
+                    {confirmed.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {confirmed.map((r) => (
+                          <span key={r.user.id} className="inline-flex items-center gap-1 text-xs bg-green-50 text-green-700 pl-2.5 pr-1 py-1 rounded-full border border-green-100">
+                            {r.user.name}
+                            <button
+                              onClick={() => adminRemoveRsvp(game.id, r.user.id, r.user.name ?? "שחקן")}
+                              disabled={loading}
+                              className="text-green-400 hover:text-red-500 transition-colors rounded-full p-0.5"
+                              title="הסר שחקן"
+                            >
+                              <UserMinus size={11} />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-400">אין שחקנים מאושרים</p>
+                    )}
                   </div>
                 )}
 
