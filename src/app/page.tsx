@@ -15,6 +15,7 @@ type Game = {
   maxPlayers: number;
   status: string;
   notes: string | null;
+  teamsPublished: boolean;
   rsvps: Array<{
     id: string;
     status: string;
@@ -24,7 +25,7 @@ type Game = {
     id: string;
     name: string;
     color: string;
-    players: Array<{ user: { id: string; name: string | null; image: string | null; position: string } }>;
+    players: Array<{ slotNote: string | null; user: { id: string; name: string | null; image: string | null; position: string } }>;
   }>;
   survey: { id: string; isOpen: boolean; isDraw: boolean; winnerTeamId: string | null } | null;
   duties: Array<{ type: string; user: { id: string; name: string | null } }>;
