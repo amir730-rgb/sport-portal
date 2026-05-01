@@ -48,6 +48,7 @@ export async function GET() {
         game: { select: { id: true, date: true, location: true } },
       },
       orderBy: { createdAt: "desc" },
+      // performedAt is selected automatically as it's a scalar field
     });
 
     const laundryDuties    = duties.filter((d) => d.type === "laundry");
@@ -76,12 +77,18 @@ export async function GET() {
     const nextLaundryId    = findNext(sortedUsers, laundryCounts);
     const nextFieldPayId   = findNext(sortedUsers, fieldPayCounts);
 
+    function dutyDate(d: { game: { date: Date; location: string | null } | null; performedAt: Date | null; createdAt: Date }): string {
+      if (d.game) return d.game.date.toISOString();
+      if (d.performedAt) return d.performedAt.toISOString();
+      return d.createdAt.toISOString();
+    }
+
     // History lists (with date/name)
     const laundryHistory = laundryDuties.map((d) => ({
       id:       d.id,
       userId:   d.userId,
       userName: d.user.name,
-      date:     d.game ? d.game.date.toISOString() : d.createdAt.toISOString(),
+      date:     dutyDate(d),
       location: d.game ? d.game.location : null,
       gameId:   d.gameId,
       note:     d.note,
@@ -91,7 +98,7 @@ export async function GET() {
       id:       d.id,
       userId:   d.userId,
       userName: d.user.name,
-      date:     d.game ? d.game.date.toISOString() : d.createdAt.toISOString(),
+      date:     dutyDate(d),
       location: d.game ? d.game.location : null,
       gameId:   d.gameId,
       note:     d.note,
