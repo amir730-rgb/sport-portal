@@ -18,8 +18,8 @@ model User {
   skillLevel    Int       @default(3)        // 1-5 (user-set)
   fitnessLevel  Int       @default(3)        // 1-5 (user-set)
   phone         String?
-  adminSkillRating    Int     @default(3)    // 1-5 (admin-set, private)
-  adminFitnessRating  Int     @default(3)    // 1-5 (admin-set, private)
+  adminSkillRating    Float   @default(3)    // 1-5.5 in 0.5 steps (admin-set, private)
+  adminFitnessRating  Float   @default(3)    // 1-5.5 in 0.5 steps (admin-set, private)
   adminPositions      String  @default("[]") // JSON array (admin-set, private)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt

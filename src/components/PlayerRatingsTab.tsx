@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import clsx from "clsx";
 import { Loader2, Save } from "lucide-react";
 import toast from "react-hot-toast";
@@ -36,21 +36,87 @@ function parseAdminPositions(raw: string): string[] {
 }
 
 function StarPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const [hovered, setHovered] = useState<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const display = hovered ?? value;
+
+  // For each star N (1..5):  left-half click → N-0.5 (min 1),  right-half click → N
+  // Extra 6th half-position → 5.5
+
+  function starFill(n: number): "full" | "half" | "empty" {
+    if (display >= n) return "full";
+    if (display >= n - 0.5 && n - 0.5 >= 1) return "half";
+    return "empty";
+  }
+
   return (
-    <div className="flex gap-0.5">
-      {[1, 2, 3, 4, 5].map((n) => (
-        <button
-          key={n}
-          type="button"
-          onClick={() => onChange(n)}
-          className={clsx(
-            "w-6 h-6 rounded text-sm transition-all",
-            n <= value ? "text-yellow-400" : "text-slate-200 hover:text-yellow-200"
-          )}
-        >
+    <div
+      ref={containerRef}
+      className="flex items-center gap-0.5"
+      dir="ltr"
+      onMouseLeave={() => setHovered(null)}
+    >
+      {[1, 2, 3, 4, 5].map((n) => {
+        const fill = starFill(n);
+        return (
+          <div key={n} className="relative w-6 h-6 select-none cursor-pointer">
+            {/* Empty base star */}
+            <span className="absolute inset-0 flex items-center justify-center text-lg text-slate-200 pointer-events-none leading-none">
+              ★
+            </span>
+            {/* Full fill */}
+            {fill === "full" && (
+              <span className="absolute inset-0 flex items-center justify-center text-lg text-yellow-400 pointer-events-none leading-none">
+                ★
+              </span>
+            )}
+            {/* Half fill — clip right 50% so only left half is visible */}
+            {fill === "half" && (
+              <span
+                className="absolute inset-0 flex items-center justify-center text-lg text-yellow-400 pointer-events-none leading-none"
+                style={{ clipPath: "inset(0 50% 0 0)" }}
+              >
+                ★
+              </span>
+            )}
+            {/* Left half → half star (N - 0.5, min 1) */}
+            <button
+              type="button"
+              className="absolute left-0 top-0 w-1/2 h-full z-10"
+              onMouseEnter={() => setHovered(n === 1 ? 1 : n - 0.5)}
+              onClick={() => onChange(n === 1 ? 1 : n - 0.5)}
+            />
+            {/* Right half → full star (N) */}
+            <button
+              type="button"
+              className="absolute right-0 top-0 w-1/2 h-full z-10"
+              onMouseEnter={() => setHovered(n)}
+              onClick={() => onChange(n)}
+            />
+          </div>
+        );
+      })}
+
+      {/* Extra half-star slot for 5.5 */}
+      <div
+        className="relative w-3 h-6 select-none cursor-pointer overflow-hidden"
+        onMouseEnter={() => setHovered(5.5)}
+        onClick={() => onChange(5.5)}
+      >
+        <span className="absolute left-0 top-0 flex items-center justify-center text-lg text-slate-200 pointer-events-none leading-none">
           ★
-        </button>
-      ))}
+        </span>
+        {display >= 5.5 && (
+          <span className="absolute left-0 top-0 flex items-center justify-center text-lg text-yellow-400 pointer-events-none leading-none">
+            ★
+          </span>
+        )}
+      </div>
+
+      {/* Numeric value */}
+      <span className="text-xs font-bold text-slate-500 w-6 text-center">
+        {value % 1 === 0 ? value : value.toFixed(1)}
+      </span>
     </div>
   );
 }

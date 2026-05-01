@@ -265,11 +265,11 @@ export default function TeamBuilderModal({
                       {/* Skill + Fitness totals */}
                       <div className="flex items-center gap-3 mb-2">
                         <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
-                          ★ {skillTotal}
+                          ★ {skillTotal % 1 === 0 ? skillTotal : skillTotal.toFixed(1)}
                           <span className="font-normal text-amber-400">רמה</span>
                         </span>
                         <span className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
-                          ⚡ {fitTotal}
+                          ⚡ {fitTotal % 1 === 0 ? fitTotal : fitTotal.toFixed(1)}
                           <span className="font-normal text-blue-400">כושר</span>
                         </span>
                       </div>
@@ -386,11 +386,11 @@ export default function TeamBuilderModal({
                           </div>
                           <div className="flex justify-center gap-3">
                             <div title="סה&quot;כ רמת משחק">
-                              <div className="text-sm font-black text-amber-600">★{skill}</div>
+                              <div className="text-sm font-black text-amber-600">★{skill % 1 === 0 ? skill : skill.toFixed(1)}</div>
                               <div className="text-[10px] text-slate-400">רמה</div>
                             </div>
                             <div title="סה&quot;כ כושר גופני">
-                              <div className="text-sm font-black text-blue-600">⚡{fit}</div>
+                              <div className="text-sm font-black text-blue-600">⚡{fit % 1 === 0 ? fit : fit.toFixed(1)}</div>
                               <div className="text-[10px] text-slate-400">כושר</div>
                             </div>
                           </div>
@@ -437,7 +437,8 @@ export default function TeamBuilderModal({
                             <p className="text-sm font-medium text-slate-800 truncate">{p.name}</p>
                             <div className="flex items-center gap-1.5 mt-0.5">
                               <span className="text-xs text-slate-400">
-                                ★{p.adminSkillRating} ⚡{p.adminFitnessRating}
+                                ★{p.adminSkillRating % 1 === 0 ? p.adminSkillRating : p.adminSkillRating.toFixed(1)}{" "}
+                                ⚡{p.adminFitnessRating % 1 === 0 ? p.adminFitnessRating : p.adminFitnessRating.toFixed(1)}
                               </span>
                               {positions.length > 0 && (
                                 <span className="text-xs text-slate-300">·</span>
