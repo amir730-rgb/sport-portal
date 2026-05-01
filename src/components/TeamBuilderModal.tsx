@@ -44,6 +44,20 @@ function teamStrength(team: TeamDraft, allPlayers: AdminPlayer[]): number {
   return total / team.players.length;
 }
 
+function teamSkillTotal(team: TeamDraft, allPlayers: AdminPlayer[]): number {
+  return team.players.reduce((sum, slot) => {
+    const p = allPlayers.find((ap) => ap.id === slot.userId);
+    return sum + (p?.adminSkillRating ?? 0);
+  }, 0);
+}
+
+function teamFitnessTotal(team: TeamDraft, allPlayers: AdminPlayer[]): number {
+  return team.players.reduce((sum, slot) => {
+    const p = allPlayers.find((ap) => ap.id === slot.userId);
+    return sum + (p?.adminFitnessRating ?? 0);
+  }, 0);
+}
+
 function parsePositions(raw: string): string[] {
   try {
     const p = JSON.parse(raw);
@@ -224,8 +238,10 @@ export default function TeamBuilderModal({
               {/* Teams grid */}
               <div className={clsx("grid gap-3", numTeams === 2 ? "grid-cols-2" : numTeams === 3 ? "grid-cols-3" : "grid-cols-2 sm:grid-cols-4")}>
                 {teams.map((team, teamIdx) => {
-                  const strength = teamStrength(team, allPlayers);
-                  const isActive = activeTeamIdx === teamIdx;
+                  const strength    = teamStrength(team, allPlayers);
+                  const skillTotal  = teamSkillTotal(team, allPlayers);
+                  const fitTotal    = teamFitnessTotal(team, allPlayers);
+                  const isActive    = activeTeamIdx === teamIdx;
                   return (
                     <div
                       key={team.color}
@@ -246,7 +262,19 @@ export default function TeamBuilderModal({
                         </span>
                       </div>
 
-                      {/* Strength bar */}
+                      {/* Skill + Fitness totals */}
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                          ★ {skillTotal}
+                          <span className="font-normal text-amber-400">רמה</span>
+                        </span>
+                        <span className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
+                          ⚡ {fitTotal}
+                          <span className="font-normal text-blue-400">כושר</span>
+                        </span>
+                      </div>
+
+                      {/* Overall strength bar */}
                       <StrengthBar
                         value={strength}
                         className={STRENGTH_COLORS[teamIdx % STRENGTH_COLORS.length]}
@@ -321,16 +349,18 @@ export default function TeamBuilderModal({
 
               {/* Balance comparison */}
               {teams.some((t) => t.players.length > 0) && (
-                <div className="bg-slate-50 rounded-xl p-3">
-                  <p className="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">מאזן כוחות</p>
+                <div className="bg-slate-50 rounded-xl p-3 space-y-3">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">מאזן כוחות</p>
+
+                  {/* Overall strength bars */}
                   <div className="space-y-1.5">
                     {teams.map((team, i) => {
-                      const s = teamStrength(team, allPlayers);
+                      const s    = teamStrength(team, allPlayers);
                       const maxS = Math.max(...teams.map((t) => teamStrength(t, allPlayers)));
                       return (
                         <div key={team.color} className="flex items-center gap-2">
                           <div className={clsx("w-2.5 h-2.5 rounded-full shrink-0", team.bg)} />
-                          <span className="text-xs text-slate-600 w-24 truncate">{team.name}</span>
+                          <span className="text-xs text-slate-600 w-20 truncate">{team.name}</span>
                           <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
                             <div
                               className={clsx("h-full rounded-full transition-all", STRENGTH_COLORS[i % STRENGTH_COLORS.length])}
@@ -338,6 +368,32 @@ export default function TeamBuilderModal({
                             />
                           </div>
                           <span className="text-xs font-bold text-slate-600 w-8 text-left">{s.toFixed(1)}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Skill + Fitness totals grid */}
+                  <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${teams.length}, 1fr)` }}>
+                    {teams.map((team) => {
+                      const skill = teamSkillTotal(team, allPlayers);
+                      const fit   = teamFitnessTotal(team, allPlayers);
+                      return (
+                        <div key={team.color} className="bg-white rounded-xl p-2 text-center border border-slate-200">
+                          <div className="flex items-center justify-center gap-1.5 mb-1">
+                            <div className={clsx("w-2 h-2 rounded-full", team.bg)} />
+                            <span className="text-xs font-semibold text-slate-600">{team.name}</span>
+                          </div>
+                          <div className="flex justify-center gap-3">
+                            <div title="סה&quot;כ רמת משחק">
+                              <div className="text-sm font-black text-amber-600">★{skill}</div>
+                              <div className="text-[10px] text-slate-400">רמה</div>
+                            </div>
+                            <div title="סה&quot;כ כושר גופני">
+                              <div className="text-sm font-black text-blue-600">⚡{fit}</div>
+                              <div className="text-[10px] text-slate-400">כושר</div>
+                            </div>
+                          </div>
                         </div>
                       );
                     })}
