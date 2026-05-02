@@ -13,7 +13,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     const { id: gameId } = await params;
-    const { userId } = await req.json();
+    const { userId, forceWaitlist } = await req.json();
 
     const game = await prisma.game.findUnique({ where: { id: gameId } });
     if (!game) return NextResponse.json({ error: "משחק לא נמצא" }, { status: 404 });
@@ -22,7 +22,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       where: { gameId, status: "confirmed" },
     });
 
-    const finalStatus = confirmedCount >= game.maxPlayers ? "waitlist" : "confirmed";
+    const finalStatus = forceWaitlist
+      ? "waitlist"
+      : confirmedCount >= game.maxPlayers
+        ? "waitlist"
+        : "confirmed";
 
     const rsvp = await prisma.rSVP.upsert({
       where: { userId_gameId: { userId, gameId } },

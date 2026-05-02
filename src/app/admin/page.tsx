@@ -12,7 +12,7 @@ import DutyPicker from "@/components/DutyPicker";
 import PaymentsTab from "@/components/PaymentsTab";
 import PlayerRatingsTab from "@/components/PlayerRatingsTab";
 import TeamBuilderModal from "@/components/TeamBuilderModal";
-import { Pencil, X, Users, MapPin, Calendar, Shield, Trash2, Users2, ClipboardCheck, Lock, CreditCard, BarChart3, UserPlus, UserMinus } from "lucide-react";
+import { Pencil, X, Users, MapPin, Shield, Trash2, Users2, ClipboardCheck, Lock, UserPlus, UserMinus, Clock, UserCheck } from "lucide-react";
 
 type Game = {
   id: string;
@@ -22,7 +22,7 @@ type Game = {
   status: string;
   notes: string | null;
   teamsPublished: boolean;
-  rsvps: Array<{ status: string; user: { id: string; name: string | null } }>;
+  rsvps: Array<{ status: string; user: { id: string; name: string | null; role?: string } }>;
   teams: Array<{ id: string; name: string; color: string; players: Array<{ user: { id: string; name: string | null } }> }>;
   survey: { id: string; isOpen: boolean } | null;
   duties: Array<{ type: string; user: { id: string; name: string | null } }>;
@@ -64,9 +64,12 @@ export default function AdminPage() {
     status: "open",
   });
   const [loading, setLoading] = useState(false);
-  // gameId → userId being added on behalf of
+  // Add player form state
   const [addingPlayerFor, setAddingPlayerFor] = useState<string | null>(null);
   const [addPlayerUserId, setAddPlayerUserId] = useState("");
+  const [addMode, setAddMode] = useState<"registered" | "waitlist" | "guest">("registered");
+  const [guestFirstName, setGuestFirstName] = useState("");
+  const [guestLastName, setGuestLastName] = useState("");
 
   const sessionUser = session?.user as { role?: string } | undefined;
   const isAdmin = sessionUser?.role === "admin";
@@ -205,23 +208,67 @@ export default function AdminPage() {
     finally { setLoading(false); }
   }
 
-  async function adminAddRsvp(gameId: string) {
+  function resetAddForm() {
+    setAddingPlayerFor(null);
+    setAddPlayerUserId("");
+    setGuestFirstName("");
+    setGuestLastName("");
+    setAddMode("registered");
+  }
+
+  async function adminAddRsvp(gameId: string, forceWaitlist = false) {
     if (!addPlayerUserId) return;
     setLoading(true);
     try {
       const res = await fetch(`/api/admin/games/${gameId}/rsvp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: addPlayerUserId }),
+        body: JSON.stringify({ userId: addPlayerUserId, forceWaitlist }),
       });
       const data = await res.json();
       if (res.ok) {
         const name = users.find(u => u.id === addPlayerUserId)?.name ?? "שחקן";
-        toast.success(data.isWaitlist ? `${name} נוסף לרשימת המתנה` : `${name} אושר למשחק`);
-        setAddingPlayerFor(null);
-        setAddPlayerUserId("");
+        toast.success(forceWaitlist ? `${name} נוסף לרשימת המתנה` : data.isWaitlist ? `${name} נוסף לרשימת המתנה` : `${name} אושר למשחק`);
+        resetAddForm();
         fetchGames();
       } else { toast.error(data.error); }
+    } catch { toast.error("שגיאה"); }
+    finally { setLoading(false); }
+  }
+
+  async function adminAddGuest(gameId: string) {
+    if (!guestFirstName.trim() || !guestLastName.trim()) {
+      toast.error("יש למלא שם פרטי ושם משפחה");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/admin/games/${gameId}/guest`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ firstName: guestFirstName, lastName: guestLastName }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(data.isWaitlist ? `${guestFirstName} ${guestLastName} נוסף להמתנה (אורח)` : `${guestFirstName} ${guestLastName} אושר (אורח)`);
+        resetAddForm();
+        fetchGames();
+      } else { toast.error(data.error); }
+    } catch { toast.error("שגיאה"); }
+    finally { setLoading(false); }
+  }
+
+  async function adminRemoveGuest(gameId: string, userId: string, name: string) {
+    if (!confirm(`למחוק את האורח "${name}" לצמיתות?`)) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/admin/games/${gameId}/guest`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+      if (res.ok) { toast.success(`${name} הוסר`); fetchGames(); }
+      else toast.error("שגיאה");
     } catch { toast.error("שגיאה"); }
     finally { setLoading(false); }
   }
@@ -683,75 +730,200 @@ export default function AdminPage() {
                   </form>
                 )}
 
-                {/* Confirmed players list */}
-                {!isEditing && (
-                  <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <p className="section-title">שחקנים מאושרים ({confirmed.length})</p>
-                      <button
-                        onClick={() => {
-                          setAddingPlayerFor(addingPlayerFor === game.id ? null : game.id);
-                          setAddPlayerUserId("");
-                        }}
-                        className="flex items-center gap-1 text-xs text-green-700 hover:text-green-800 font-medium"
-                      >
-                        <UserPlus size={12} /> הוסף שחקן
-                      </button>
-                    </div>
-
-                    {/* Add player inline form */}
-                    {addingPlayerFor === game.id && (
-                      <div className="flex gap-2 items-center bg-green-50 border border-green-100 rounded-xl px-3 py-2">
-                        <select
-                          className="flex-1 text-xs bg-transparent border-none outline-none text-slate-700"
-                          value={addPlayerUserId}
-                          onChange={(e) => setAddPlayerUserId(e.target.value)}
+                {/* Confirmed + Waitlist players */}
+                {!isEditing && (() => {
+                  const waitlisted = game.rsvps.filter(r => r.status === "waitlist");
+                  return (
+                    <div className="mt-3 pt-3 border-t border-slate-100 space-y-3">
+                      {/* Header row */}
+                      <div className="flex items-center justify-between">
+                        <p className="section-title">
+                          שחקנים מאושרים ({confirmed.length}/{game.maxPlayers})
+                        </p>
+                        <button
+                          onClick={() => {
+                            if (addingPlayerFor === game.id) {
+                              resetAddForm();
+                            } else {
+                              setAddingPlayerFor(game.id);
+                              setAddMode("registered");
+                              setAddPlayerUserId("");
+                              setGuestFirstName("");
+                              setGuestLastName("");
+                            }
+                          }}
+                          className="flex items-center gap-1 text-xs text-green-700 hover:text-green-800 font-medium"
                         >
-                          <option value="">בחר שחקן...</option>
-                          {users
-                            .filter((u) => !game.rsvps.some((r) => r.user.id === u.id))
-                            .map((u) => (
-                              <option key={u.id} value={u.id}>{u.name}</option>
+                          {addingPlayerFor === game.id ? <><X size={12} /> ביטול</> : <><UserPlus size={12} /> הוסף</>}
+                        </button>
+                      </div>
+
+                      {/* Add player form */}
+                      {addingPlayerFor === game.id && (
+                        <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">
+                          {/* Mode tabs */}
+                          <div className="flex gap-1">
+                            {([
+                              { key: "registered", label: "שחקן רשום", icon: UserCheck },
+                              { key: "waitlist",   label: "להמתנה",    icon: Clock },
+                              { key: "guest",      label: "אורח",      icon: UserPlus },
+                            ] as const).map(({ key, label, icon: Icon }) => (
+                              <button
+                                key={key}
+                                onClick={() => { setAddMode(key); setAddPlayerUserId(""); }}
+                                className={clsx(
+                                  "flex-1 flex items-center justify-center gap-1 text-xs py-1.5 rounded-lg font-medium transition-all",
+                                  addMode === key
+                                    ? "bg-green-600 text-white"
+                                    : "bg-white text-slate-500 hover:bg-slate-100 border border-slate-200"
+                                )}
+                              >
+                                <Icon size={10} /> {label}
+                              </button>
                             ))}
-                        </select>
-                        <button
-                          onClick={() => adminAddRsvp(game.id)}
-                          disabled={!addPlayerUserId || loading}
-                          className="text-xs bg-green-600 text-white px-2.5 py-1 rounded-lg font-medium disabled:opacity-40 hover:bg-green-700 transition-colors"
-                        >
-                          אשר
-                        </button>
-                        <button
-                          onClick={() => { setAddingPlayerFor(null); setAddPlayerUserId(""); }}
-                          className="text-slate-400 hover:text-slate-600"
-                        >
-                          <X size={13} />
-                        </button>
-                      </div>
-                    )}
+                          </div>
 
-                    {/* Player chips with remove button */}
-                    {confirmed.length > 0 ? (
-                      <div className="flex flex-wrap gap-1.5">
-                        {confirmed.map((r) => (
-                          <span key={r.user.id} className="inline-flex items-center gap-1 text-xs bg-green-50 text-green-700 pl-2.5 pr-1 py-1 rounded-full border border-green-100">
-                            {r.user.name}
-                            <button
-                              onClick={() => adminRemoveRsvp(game.id, r.user.id, r.user.name ?? "שחקן")}
-                              disabled={loading}
-                              className="text-green-400 hover:text-red-500 transition-colors rounded-full p-0.5"
-                              title="הסר שחקן"
-                            >
-                              <UserMinus size={11} />
-                            </button>
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-xs text-slate-400">אין שחקנים מאושרים</p>
-                    )}
-                  </div>
-                )}
+                          {/* Registered / Waitlist — dropdown */}
+                          {(addMode === "registered" || addMode === "waitlist") && (
+                            <div className="flex gap-2">
+                              <select
+                                className="flex-1 text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none"
+                                value={addPlayerUserId}
+                                onChange={(e) => setAddPlayerUserId(e.target.value)}
+                              >
+                                <option value="">בחר שחקן...</option>
+                                {users
+                                  .filter((u) => !game.rsvps.some((r) => r.user.id === u.id))
+                                  .map((u) => (
+                                    <option key={u.id} value={u.id}>{u.name}</option>
+                                  ))}
+                              </select>
+                              <button
+                                onClick={() => adminAddRsvp(game.id, addMode === "waitlist")}
+                                disabled={!addPlayerUserId || loading}
+                                className="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg font-medium disabled:opacity-40 hover:bg-green-700 transition-colors whitespace-nowrap"
+                              >
+                                {addMode === "waitlist" ? "הוסף להמתנה" : "אשר הגעה"}
+                              </button>
+                            </div>
+                          )}
+
+                          {/* Guest — name inputs */}
+                          {addMode === "guest" && (
+                            <div className="space-y-2">
+                              <div className="grid grid-cols-2 gap-2">
+                                <input
+                                  type="text"
+                                  placeholder="שם פרטי"
+                                  value={guestFirstName}
+                                  onChange={(e) => setGuestFirstName(e.target.value)}
+                                  className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:border-green-400"
+                                />
+                                <input
+                                  type="text"
+                                  placeholder="שם משפחה"
+                                  value={guestLastName}
+                                  onChange={(e) => setGuestLastName(e.target.value)}
+                                  className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:border-green-400"
+                                />
+                              </div>
+                              <button
+                                onClick={() => adminAddGuest(game.id)}
+                                disabled={!guestFirstName.trim() || !guestLastName.trim() || loading}
+                                className="w-full text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg font-medium disabled:opacity-40 hover:bg-green-700 transition-colors"
+                              >
+                                הוסף אורח למשחק
+                              </button>
+                              <p className="text-[10px] text-slate-400 text-center">
+                                האורח יופיע ברשימת השחקנים ובבנאי הקבוצות. לא נוצר חשבון כניסה.
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Confirmed chips */}
+                      {confirmed.length > 0 ? (
+                        <div className="flex flex-wrap gap-1.5">
+                          {confirmed.map((r) => {
+                            const isGuest = r.user.role === "guest";
+                            return (
+                              <span
+                                key={r.user.id}
+                                className={clsx(
+                                  "inline-flex items-center gap-1 text-xs pl-2.5 pr-1 py-1 rounded-full border",
+                                  isGuest
+                                    ? "bg-purple-50 text-purple-700 border-purple-100"
+                                    : "bg-green-50 text-green-700 border-green-100"
+                                )}
+                              >
+                                {r.user.name}
+                                {isGuest && <span className="text-[9px] opacity-60">(אורח)</span>}
+                                <button
+                                  onClick={() =>
+                                    isGuest
+                                      ? adminRemoveGuest(game.id, r.user.id, r.user.name ?? "אורח")
+                                      : adminRemoveRsvp(game.id, r.user.id, r.user.name ?? "שחקן")
+                                  }
+                                  disabled={loading}
+                                  className={clsx(
+                                    "transition-colors rounded-full p-0.5",
+                                    isGuest ? "text-purple-300 hover:text-red-500" : "text-green-400 hover:text-red-500"
+                                  )}
+                                  title={isGuest ? "הסר אורח" : "הסר שחקן"}
+                                >
+                                  <UserMinus size={11} />
+                                </button>
+                              </span>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-slate-400">אין שחקנים מאושרים</p>
+                      )}
+
+                      {/* Waitlist chips */}
+                      {waitlisted.length > 0 && (
+                        <div>
+                          <p className="section-title flex items-center gap-1 mb-1.5">
+                            <Clock size={10} /> ממתינים ({waitlisted.length})
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {waitlisted.map((r) => {
+                              const isGuest = r.user.role === "guest";
+                              return (
+                                <span
+                                  key={r.user.id}
+                                  className={clsx(
+                                    "inline-flex items-center gap-1 text-xs pl-2.5 pr-1 py-1 rounded-full border",
+                                    isGuest
+                                      ? "bg-purple-50 text-purple-600 border-purple-100"
+                                      : "bg-amber-50 text-amber-700 border-amber-100"
+                                  )}
+                                >
+                                  {r.user.name}
+                                  {isGuest && <span className="text-[9px] opacity-60">(אורח)</span>}
+                                  <button
+                                    onClick={() =>
+                                      isGuest
+                                        ? adminRemoveGuest(game.id, r.user.id, r.user.name ?? "אורח")
+                                        : adminRemoveRsvp(game.id, r.user.id, r.user.name ?? "שחקן")
+                                    }
+                                    disabled={loading}
+                                    className="text-amber-300 hover:text-red-500 transition-colors rounded-full p-0.5"
+                                    title="הסר"
+                                  >
+                                    <UserMinus size={11} />
+                                  </button>
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* Duty assignments */}
                 {!isEditing && (

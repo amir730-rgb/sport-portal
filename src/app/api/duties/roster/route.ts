@@ -33,8 +33,9 @@ export async function GET() {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: "לא מחובר" }, { status: 401 });
 
-    // All registered users (players + admins)
+    // All registered users (players + admins, excludes temporary guests)
     const allUsers = await prisma.user.findMany({
+      where: { role: { not: "guest" } },
       select: { id: true, name: true },
     });
 

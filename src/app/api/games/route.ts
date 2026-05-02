@@ -14,7 +14,7 @@ export async function GET() {
         rsvps: {
           include: {
             user: {
-              select: { id: true, name: true, image: true, position: true, skillLevel: true },
+              select: { id: true, name: true, image: true, position: true, skillLevel: true, role: true },
             },
           },
         },
