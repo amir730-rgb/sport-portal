@@ -22,8 +22,9 @@ type Game = {
   status: string;
   notes: string | null;
   teamsPublished: boolean;
+  publishedDraft: string | null;
   rsvps: Array<{ status: string; user: { id: string; name: string | null; role?: string } }>;
-  teams: Array<{ id: string; name: string; color: string; players: Array<{ user: { id: string; name: string | null } }> }>;
+  teams: Array<{ id: string; name: string; color: string; draftLabel?: string; players: Array<{ user: { id: string; name: string | null } }> }>;
   survey: { id: string; isOpen: boolean } | null;
   duties: Array<{ type: string; user: { id: string; name: string | null } }>;
 };
@@ -139,12 +140,12 @@ export default function AdminPage() {
     setLoading(false);
   }
 
-  async function publishTeams(gameId: string, publish: boolean) {
+  async function publishTeams(gameId: string, publish: boolean, draftLabel?: string) {
     setLoading(true);
     const res = await fetch(`/api/admin/games/${gameId}/publish`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ publish }),
+      body: JSON.stringify({ publish, draftLabel }),
     });
     if (res.ok) {
       toast.success(publish ? "הרכבים פורסמו לשחקנים" : "פרסום הרכבים בוטל");
@@ -585,20 +586,15 @@ export default function AdminPage() {
                     >
                       <Users size={12} /> הרכב
                     </button>
-                    {/* Publish / unpublish teams */}
-                    {game.teams.length > 0 && (
+                    {/* Unpublish button — publish is done inside the modal */}
+                    {game.teamsPublished && (
                       <button
-                        onClick={() => publishTeams(game.id, !game.teamsPublished)}
+                        onClick={() => publishTeams(game.id, false)}
                         disabled={loading}
-                        className={clsx(
-                          "flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg font-medium transition-colors",
-                          game.teamsPublished
-                            ? "bg-green-100 text-green-700 hover:bg-green-200"
-                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                        )}
+                        className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg font-medium transition-colors bg-green-100 text-green-700 hover:bg-green-200"
+                        title={`מפורסם: ${game.publishedDraft ?? ""}`}
                       >
-                        <Shield size={12} />
-                        {game.teamsPublished ? "מפורסם" : "פרסם"}
+                        <Shield size={12} /> מפורסם
                       </button>
                     )}
                     {game.status === "open" && (
@@ -1018,8 +1014,9 @@ export default function AdminPage() {
             if (!g) return "";
             return format(new Date(g.date), "EEEE, d בMMM · HH:mm", { locale: he });
           })()}
+          publishedDraft={games.find((g) => g.id === teamBuilderGameId)?.publishedDraft ?? null}
           onClose={() => setTeamBuilderGameId(null)}
-          onSaved={() => { setTeamBuilderGameId(null); fetchGames(); }}
+          onSaved={() => fetchGames()}
         />
       )}
     </div>

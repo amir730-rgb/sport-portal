@@ -15,9 +15,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const { id: gameId } = await params;
     const body = await req.json();
+    const draftLabel: string = body.draftLabel ?? "הרכב 1";
 
-    // Delete old teams first
-    await prisma.team.deleteMany({ where: { gameId } });
+    // Delete only the teams belonging to this specific draft
+    await prisma.team.deleteMany({ where: { gameId, draftLabel } });
 
     // ── Manual team assignment ──
     if (body.manual && Array.isArray(body.teams)) {
@@ -28,6 +29,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
               gameId,
               name: t.name,
               color: t.color,
+              draftLabel,
               players: {
                 create: t.players.map((p) => ({
                   userId: p.userId,
@@ -69,6 +71,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             gameId,
             name: teamColor.name,
             color: teamColor.color,
+            draftLabel,
             players: {
               create: group.map((p) => ({ userId: p.id })),
             },

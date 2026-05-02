@@ -18,7 +18,7 @@ export async function GET() {
             },
           },
         },
-        // Admins always see teams; non-admins only see published teams
+        // Admins always see teams (all drafts); non-admins only see the published draft
         teams: isAdmin
           ? {
               include: {
@@ -49,12 +49,14 @@ export async function GET() {
       },
     });
 
-    // For non-admins: strip teams from games where teamsPublished = false
+    // For non-admins: only show teams from the published draft
     const result = isAdmin
       ? games
       : games.map((g) => ({
           ...g,
-          teams: g.teamsPublished ? g.teams : [],
+          teams: g.teamsPublished && g.publishedDraft
+            ? g.teams.filter((t) => (t as typeof t & { draftLabel: string }).draftLabel === g.publishedDraft)
+            : [],
         }));
 
     return NextResponse.json(result);

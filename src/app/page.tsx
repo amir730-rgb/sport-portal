@@ -16,6 +16,7 @@ type Game = {
   status: string;
   notes: string | null;
   teamsPublished: boolean;
+  publishedDraft: string | null;
   rsvps: Array<{
     id: string;
     status: string;

@@ -12,14 +12,22 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     const { id: gameId } = await params;
-    const { publish } = await req.json(); // true = publish, false = unpublish
+    const { publish, draftLabel } = await req.json();
+    // publish=true: publish the given draftLabel
+    // publish=false: unpublish entirely
 
     const game = await prisma.game.update({
       where: { id: gameId },
-      data: { teamsPublished: publish },
+      data: {
+        teamsPublished: publish,
+        publishedDraft: publish ? (draftLabel ?? "הרכב 1") : null,
+      },
     });
 
-    return NextResponse.json({ teamsPublished: game.teamsPublished });
+    return NextResponse.json({
+      teamsPublished: game.teamsPublished,
+      publishedDraft: game.publishedDraft,
+    });
   } catch {
     return NextResponse.json({ error: "שגיאת שרת" }, { status: 500 });
   }

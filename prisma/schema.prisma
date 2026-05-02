@@ -81,6 +81,7 @@ model Game {
   status          String   @default("open") // "open" | "closed" | "completed"
   notes           String?
   teamsPublished  Boolean  @default(false)  // controls visibility of teams to players
+  publishedDraft  String?                  // which draftLabel is visible to players (null = none)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -108,11 +109,12 @@ model RSVP {
 }
 
 model Team {
-  id        String   @id @default(cuid())
-  gameId    String
-  name      String   // "קבוצה אדומה" | "קבוצה כחולה" etc
-  color     String   // "red" | "blue" | "green" | "yellow"
-  createdAt DateTime @default(now())
+  id         String   @id @default(cuid())
+  gameId     String
+  name       String   // "קבוצה אדומה" | "קבוצה כחולה" etc
+  color      String   // "red" | "blue" | "green" | "yellow"
+  draftLabel String   @default("הרכב 1")  // supports multiple saved drafts
+  createdAt  DateTime @default(now())
 
   game        Game         @relation(fields: [gameId], references: [id], onDelete: Cascade)
   players     TeamPlayer[]
