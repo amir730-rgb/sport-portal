@@ -76,17 +76,14 @@ export async function GET() {
 
     stats.sort((a, b) => b.mvpCount - a.mvpCount || b.wins - a.wins);
 
-    // ── Awards — only "כוכב העונה" + "הקישקוש" ───────────────────────────
-    const topMvp      = stats.find((s) => s.mvpCount > 0) ?? null;
-    const mostCanceled = [...stats]
-      .filter((s) => s.declined > 0)
-      .sort((a, b) => b.declined - a.declined)[0] ?? null;
+    // ── Awards ───────────────────────────────────────────────────────────
+    const topMvp = stats.find((s) => s.mvpCount > 0) ?? null;
 
     return NextResponse.json({
       players: stats,
       awards: {
-        topMvp:      topMvp      ? { player: topMvp,      title: "כוכב העונה", desc: `${topMvp.mvpCount} ${topMvp.mvpCount === 1 ? "זכייה" : "זכיות"} ב-MVP` } : null,
-        mostCanceled: mostCanceled ? { player: mostCanceled, title: "הקישקוש",    desc: "הכי הרבה ביטולים"           } : null,
+        topMvp: topMvp ? { player: topMvp, title: "כוכב העונה", desc: `${topMvp.mvpCount} ${topMvp.mvpCount === 1 ? "זכייה" : "זכיות"} ב-MVP` } : null,
+        mostCanceled: null,
       },
     });
   } catch {

@@ -73,8 +73,7 @@ export default function StatsPage() {
   const awards = [stats.awards.topMvp, stats.awards.mostCanceled].filter(Boolean) as NonNullable<Award>[];
 
   const AWARD_ICON: Record<string, React.ReactNode> = {
-    "כוכב העונה": <Crown  size={20} className="text-amber-400 mx-auto mb-1" />,
-    "הקישקוש":    <Trophy size={20} className="text-slate-400 mx-auto mb-1" />,
+    "כוכב העונה": <Crown size={20} className="text-amber-400 mx-auto mb-1" />,
   };
 
   return (
