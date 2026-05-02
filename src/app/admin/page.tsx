@@ -12,7 +12,7 @@ import DutyPicker from "@/components/DutyPicker";
 import PaymentsTab from "@/components/PaymentsTab";
 import PlayerRatingsTab from "@/components/PlayerRatingsTab";
 import TeamBuilderModal from "@/components/TeamBuilderModal";
-import { Pencil, X, Users, MapPin, Calendar, Shield, Trash2, Users2, ClipboardCheck, Lock, UserPlus, UserMinus, Clock, UserCheck } from "lucide-react";
+import { Pencil, X, Users, MapPin, Calendar, Shield, Trash2, Users2, ClipboardCheck, Lock, CreditCard, BarChart3, UserPlus, UserMinus, Clock, UserCheck } from "lucide-react";
 
 type Game = {
   id: string;
