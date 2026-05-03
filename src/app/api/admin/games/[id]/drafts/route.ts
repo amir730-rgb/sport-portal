@@ -10,7 +10,7 @@ async function requireAdmin() {
   return session;
 }
 
-// GET: return all saved drafts for a game (grouped by draftLabel)
+// GET: return all saved drafts for a game, filtered to confirmed RSVPs only
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -22,34 +22,54 @@ export async function GET(
 
     const { id: gameId } = await params;
 
-    const game = await prisma.game.findUnique({
-      where: { id: gameId },
-      select: { publishedDraft: true },
-    });
-
-    const teams = await prisma.team.findMany({
-      where: { gameId },
-      include: {
-        players: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                adminSkillRating: true,
-                adminFitnessRating: true,
-                adminPositions: true,
+    const [game, confirmedRsvps, teams] = await Promise.all([
+      prisma.game.findUnique({ where: { id: gameId }, select: { publishedDraft: true } }),
+      prisma.rSVP.findMany({ where: { gameId, status: "confirmed" }, select: { userId: true } }),
+      prisma.team.findMany({
+        where: { gameId },
+        include: {
+          players: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  adminSkillRating: true,
+                  adminFitnessRating: true,
+                  adminPositions: true,
+                },
               },
             },
           },
         },
-      },
-      orderBy: { createdAt: "asc" },
-    });
+        orderBy: { createdAt: "asc" },
+      }),
+    ]);
 
-    // Group teams by draftLabel
-    const draftMap = new Map<string, typeof teams>();
+    const confirmedIds = new Set(confirmedRsvps.map((r) => r.userId));
+
+    // Proactively delete stale TeamPlayer entries (players removed from RSVP)
+    const stalePlayerIds: string[] = [];
     for (const team of teams) {
+      for (const p of team.players) {
+        if (!confirmedIds.has(p.userId)) {
+          stalePlayerIds.push(p.id);
+        }
+      }
+    }
+    if (stalePlayerIds.length > 0) {
+      await prisma.teamPlayer.deleteMany({ where: { id: { in: stalePlayerIds } } });
+    }
+
+    // Filter teams in-memory so we return fresh data without stale players
+    const cleanTeams = teams.map((team) => ({
+      ...team,
+      players: team.players.filter((p) => confirmedIds.has(p.userId)),
+    }));
+
+    // Group by draftLabel
+    const draftMap = new Map<string, typeof cleanTeams>();
+    for (const team of cleanTeams) {
       const label = team.draftLabel;
       if (!draftMap.has(label)) draftMap.set(label, []);
       draftMap.get(label)!.push(team);
