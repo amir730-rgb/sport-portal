@@ -49,15 +49,25 @@ export async function GET() {
       },
     });
 
-    // For non-admins: only show teams from the published draft
+    // For non-admins: only show the published draft, and only confirmed players within each team
+    const confirmedUserIds = (game: typeof games[0]) =>
+      new Set(game.rsvps.filter((r) => r.status === "confirmed").map((r) => r.user.id));
+
     const result = isAdmin
       ? games
-      : games.map((g) => ({
-          ...g,
-          teams: g.teamsPublished && g.publishedDraft
-            ? g.teams.filter((t) => (t as typeof t & { draftLabel: string }).draftLabel === g.publishedDraft)
-            : [],
-        }));
+      : games.map((g) => {
+          const confirmed = confirmedUserIds(g);
+          const publishedTeams = g.teamsPublished && g.publishedDraft
+            ? g.teams
+                .filter((t) => (t as typeof t & { draftLabel: string }).draftLabel === g.publishedDraft)
+                .map((t) => ({
+                  ...t,
+                  // strip players who are no longer in the confirmed RSVP
+                  players: t.players.filter((p) => confirmed.has(p.user.id)),
+                }))
+            : [];
+          return { ...g, teams: publishedTeams };
+        });
 
     return NextResponse.json(result);
   } catch {

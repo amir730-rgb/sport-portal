@@ -57,6 +57,14 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       where: { userId_gameId: { userId, gameId } },
     });
 
+    // Also remove the player from any team assignment in this game
+    await prisma.teamPlayer.deleteMany({
+      where: {
+        userId,
+        team: { gameId },
+      },
+    });
+
     // Promote first waitlist person if a confirmed slot opened up
     const game = await prisma.game.findUnique({ where: { id: gameId } });
     const confirmedCount = await prisma.rSVP.count({ where: { gameId, status: "confirmed" } });
