@@ -98,7 +98,10 @@ export default function HomePage() {
   const userId   = (session.user as { id?: string }).id!;
   const firstName = session.user?.name?.split(" ")[0] ?? "";
   const upcoming = games.filter((g) => !isPast(new Date(g.date)) || isToday(new Date(g.date)));
-  const past     = games.filter((g) => isPast(new Date(g.date)) && !isToday(new Date(g.date)));
+  // Past games: most recent first
+  const past = games
+    .filter((g) => isPast(new Date(g.date)) && !isToday(new Date(g.date)))
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const nextGame = upcoming[0];
 

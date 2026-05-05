@@ -8,6 +8,13 @@ export async function GET() {
     const session = await getServerSession(authOptions);
     const isAdmin = (session?.user as { role?: string })?.role === "admin";
 
+    // Auto-complete games that ended more than 2 days ago
+    const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
+    await prisma.game.updateMany({
+      where: { date: { lt: twoDaysAgo }, status: { not: "completed" } },
+      data: { status: "completed" },
+    });
+
     const games = await prisma.game.findMany({
       orderBy: { date: "asc" },
       include: {

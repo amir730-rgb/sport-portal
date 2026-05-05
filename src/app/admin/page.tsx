@@ -90,7 +90,19 @@ export default function AdminPage() {
   async function fetchGames() {
     const res = await fetch("/api/games");
     const data = await res.json();
-    setGames(Array.isArray(data) ? data : []);
+    if (!Array.isArray(data)) { setGames([]); return; }
+    // Upcoming games first (nearest date first), then past games (most recent first)
+    const now = Date.now();
+    const sorted = [...data].sort((a, b) => {
+      const aTime = new Date(a.date).getTime();
+      const bTime = new Date(b.date).getTime();
+      const aUpcoming = aTime >= now;
+      const bUpcoming = bTime >= now;
+      if (aUpcoming && !bUpcoming) return -1;
+      if (!aUpcoming && bUpcoming) return 1;
+      return aUpcoming ? aTime - bTime : bTime - aTime;
+    });
+    setGames(sorted);
   }
 
   async function fetchUsers() {
