@@ -1,15 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
-import nodemailer from "nodemailer";
-
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD,
-  },
-});
+import { Resend } from "resend";
 
 export async function POST(req: NextRequest) {
   try {
@@ -34,9 +26,10 @@ export async function POST(req: NextRequest) {
     const resetUrl = `${appUrl}/reset-password?token=${token}`;
     const firstName = user.name?.split(" ")[0] ?? "שחקן";
 
-    await transporter.sendMail({
-      from: `"KickList" <${process.env.GMAIL_USER}>`,
-      to: email,
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    const { error: mailError } = await resend.emails.send({
+      from: "KickList <onboarding@resend.dev>",
+      to: [email],
       subject: "איפוס סיסמה — KickList",
       html: `
 <!DOCTYPE html>
@@ -92,6 +85,11 @@ export async function POST(req: NextRequest) {
 </body>
 </html>`,
     });
+
+    if (mailError) {
+      console.error("Resend error:", mailError);
+      return NextResponse.json({ error: "שגיאה בשליחת המייל" }, { status: 500 });
+    }
 
     return NextResponse.json({ ok: true });
   } catch (err) {

@@ -71,6 +71,7 @@ export default function GameCard({ game, userId, onUpdate, isPast = false, payme
 
   const confirmed = game.rsvps.filter((r) => r.status === "confirmed");
   const waitlist  = game.rsvps.filter((r) => r.status === "waitlist");
+  const declined  = game.rsvps.filter((r) => r.status === "declined");
   const myRsvp    = game.rsvps.find((r) => r.user.id === userId);
   const isFull    = confirmed.length >= game.maxPlayers;
   const pct       = Math.min((confirmed.length / game.maxPlayers) * 100, 100);
@@ -93,7 +94,11 @@ export default function GameCard({ game, userId, onUpdate, isPast = false, payme
       const data = await res.json();
       if (!res.ok) { toast.error(data.error); }
       else {
-        toast.success(data.isWaitlist ? "נוספת לרשימת ההמתנה" : s === "confirmed" ? "אישרת הגעה" : "ביטלת הגעה");
+        toast.success(
+          data.isWaitlist ? "נוספת לרשימת ההמתנה" :
+          s === "confirmed" ? "אישרת הגעה" :
+          "סומנת כלא מגיע"
+        );
         onUpdate();
       }
     } catch { toast.error("שגיאה"); }
@@ -218,24 +223,37 @@ export default function GameCard({ game, userId, onUpdate, isPast = false, payme
             </>
           ) : (
             <div className="flex-1 flex items-center gap-2.5">
-              <div className={clsx(
-                "flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl font-semibold text-sm",
-                myRsvp.status === "confirmed" ? "bg-green-50 text-green-700 border border-green-200" :
-                myRsvp.status === "waitlist"  ? "bg-amber-50 text-amber-700 border border-amber-200" :
-                "bg-slate-100 text-slate-500"
-              )}>
-                {myRsvp.status === "confirmed" ? <><CheckCircle2 size={14} /> אישרת הגעה</> :
-                 myRsvp.status === "waitlist"  ? <><Clock4 size={14} /> רשימת המתנה</> :
-                 <><XCircle size={14} /> לא מגיע</>}
-              </div>
-              {myRsvp.status !== "declined" && (
-                <button
-                  onClick={handleCancel}
-                  disabled={loading}
-                  className="text-xs text-slate-400 hover:text-red-500 transition-colors px-2 py-1"
-                >
-                  ביטול
-                </button>
+              {myRsvp.status === "declined" ? (
+                <>
+                  <div className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl font-semibold text-sm bg-red-50 text-red-600 border border-red-200">
+                    <XCircle size={14} /> לא מגיע
+                  </div>
+                  <button
+                    onClick={() => handleRsvp("confirmed")}
+                    disabled={loading}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl font-semibold text-sm bg-green-600 text-white hover:bg-green-700 transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    <CheckCircle2 size={14} /> שיניתי דעתי
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className={clsx(
+                    "flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl font-semibold text-sm",
+                    myRsvp.status === "confirmed" ? "bg-green-50 text-green-700 border border-green-200" :
+                    "bg-amber-50 text-amber-700 border border-amber-200"
+                  )}>
+                    {myRsvp.status === "confirmed" ? <><CheckCircle2 size={14} /> אישרת הגעה</> :
+                     <><Clock4 size={14} /> רשימת המתנה</>}
+                  </div>
+                  <button
+                    onClick={handleCancel}
+                    disabled={loading}
+                    className="text-xs text-slate-400 hover:text-red-500 transition-colors px-2 py-1"
+                  >
+                    ביטול
+                  </button>
+                </>
               )}
             </div>
           )}
@@ -286,6 +304,19 @@ export default function GameCard({ game, userId, onUpdate, isPast = false, payme
                   <div className="flex flex-wrap gap-1.5">
                     {waitlist.map((r) => (
                       <span key={r.user.id} className="inline-flex items-center badge-yellow text-xs px-2.5 py-1 rounded-full">
+                        {r.user.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {declined.length > 0 && (
+                <div className="mt-3">
+                  <p className="section-title flex items-center gap-1.5 text-red-500"><XCircle size={11} /> לא מגיעים ({declined.length})</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {declined.map((r) => (
+                      <span key={r.user.id} className="inline-flex items-center gap-1 bg-red-50 border border-red-100 text-red-600 px-2.5 py-1 rounded-full text-xs font-medium">
                         {r.user.name}
                       </span>
                     ))}
