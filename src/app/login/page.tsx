@@ -92,9 +92,11 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                סיסמה
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-sm font-medium text-slate-300">
+                  סיסמה
+                </label>
+              </div>
               <div className="relative">
                 <Lock size={15} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500" />
                 <input
@@ -107,12 +109,6 @@ export default function LoginPage() {
                   dir="ltr"
                 />
               </div>
-            </div>
-
-            <div className="text-left">
-              <Link href="/forgot-password" className="text-xs text-slate-500 hover:text-green-400 transition-colors">
-                שכחתי סיסמה
-              </Link>
             </div>
 
             <button
@@ -134,7 +130,16 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-slate-500">
+          <div className="mt-4 text-center">
+            <Link
+              href="/forgot-password"
+              className="text-sm text-slate-400 hover:text-green-400 transition-colors underline underline-offset-2"
+            >
+              שכחתי סיסמה
+            </Link>
+          </div>
+
+          <p className="mt-4 text-center text-sm text-slate-500">
             אין לך חשבון?{" "}
             <Link href="/register" className="text-green-400 font-semibold hover:text-green-300 transition-colors">
               הרשמה
