@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
 
 export async function POST(req: NextRequest) {
   try {
@@ -26,10 +26,21 @@ export async function POST(req: NextRequest) {
     const resetUrl = `${appUrl}/reset-password?token=${token}`;
     const firstName = user.name?.split(" ")[0] ?? "שחקן";
 
-    const resend = new Resend(process.env.RESEND_API_KEY);
-    const { error: mailError } = await resend.emails.send({
-      from: "KickList <onboarding@resend.dev>",
-      to: [email],
+    // Create transporter inside handler to avoid serverless cold-start issues
+    const transporter = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true,
+      auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD,
+      },
+      tls: { rejectUnauthorized: false },
+    });
+
+    await transporter.sendMail({
+      from: `"KickList" <${process.env.GMAIL_USER}>`,
+      to: email,
       subject: "איפוס סיסמה — KickList",
       html: `
 <!DOCTYPE html>
@@ -39,14 +50,12 @@ export async function POST(req: NextRequest) {
   <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 20px;">
     <tr><td align="center">
       <table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
-        <!-- Header -->
         <tr>
           <td style="background:#0f172a;padding:28px 36px;text-align:right;">
             <span style="background:#16a34a;color:#fff;font-weight:900;font-size:13px;padding:6px 12px;border-radius:8px;letter-spacing:1px;">KL</span>
             <span style="color:#fff;font-weight:700;font-size:18px;margin-right:10px;vertical-align:middle;">KickList</span>
           </td>
         </tr>
-        <!-- Body -->
         <tr>
           <td style="padding:36px;text-align:right;">
             <h1 style="margin:0 0 8px;font-size:22px;color:#0f172a;">שלום ${firstName},</h1>
@@ -63,20 +72,13 @@ export async function POST(req: NextRequest) {
                 </td>
               </tr>
             </table>
-            <p style="margin:0 0 8px;color:#94a3b8;font-size:13px;">
-              הקישור תקף לשעה אחת בלבד.
-            </p>
-            <p style="margin:0;color:#94a3b8;font-size:13px;">
-              אם לא ביקשת לאפס סיסמה, ניתן להתעלם מהמייל הזה.
-            </p>
+            <p style="margin:0 0 8px;color:#94a3b8;font-size:13px;">הקישור תקף לשעה אחת בלבד.</p>
+            <p style="margin:0;color:#94a3b8;font-size:13px;">אם לא ביקשת לאפס סיסמה, ניתן להתעלם מהמייל הזה.</p>
           </td>
         </tr>
-        <!-- Footer -->
         <tr>
           <td style="background:#f8fafc;padding:20px 36px;border-top:1px solid #e2e8f0;text-align:right;">
-            <p style="margin:0;color:#94a3b8;font-size:12px;">
-              © 2026 KickList · ניהול משחקי כדורגל
-            </p>
+            <p style="margin:0;color:#94a3b8;font-size:12px;">© 2026 KickList · ניהול משחקי כדורגל</p>
           </td>
         </tr>
       </table>
@@ -86,14 +88,10 @@ export async function POST(req: NextRequest) {
 </html>`,
     });
 
-    if (mailError) {
-      console.error("Resend error:", mailError);
-      return NextResponse.json({ error: "שגיאה בשליחת המייל" }, { status: 500 });
-    }
-
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("forgot-password error:", err);
-    return NextResponse.json({ error: "שגיאת שרת" }, { status: 500 });
+    const message = err instanceof Error ? err.message : "שגיאת שרת";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
